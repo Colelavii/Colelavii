@@ -1,6 +1,7 @@
-<center><h1>Hi👋, I’m @Colelavii</h1></center>
-<hr>
-<center>Budding..🙌🙌 Frontend Developer🖥️</center>
+<h1>Hi👋, I’m @Colelavii</h1>
+
+Budding..🙌🙌 Frontend Developer🖥️
+
 <b> 👀 I’m interested in learning how to build a complete website and app from start to finish.
 - 🌱 I’m currently learning ...#React+JS #React+TS
 </b>
