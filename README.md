@@ -1,8 +1,9 @@
-- 👋 Hi, I’m @Cole
-- 👀 I’m interested in learning how to build a complete website and app from start to finish.
-- 🌱 I’m currently learning ...#ReactJS #ReactTS
-- 💞️ I’m looking to collaborate on ...
-- 📫 How to reach me ..
+<center><h1>Hi👋, I’m @Colelavii</h1></center>
+<hr>
+<center>Budding..🙌🙌 Frontend Developer🖥️</center>
+<b> 👀 I’m interested in learning how to build a complete website and app from start to finish.
+- 🌱 I’m currently learning ...#React+JS #React+TS
+</b>
 
 <!---
 Colelavii/Colelavii is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
