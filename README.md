@@ -1,6 +1,6 @@
-- 👋 Hi, I’m @Colelavii
+- 👋 Hi, I’m @Cole
 - 👀 I’m interested in learning how to build a complete website and app from start to finish.
-- 🌱 I’m currently learning ...
+- 🌱 I’m currently learning ...#ReactJS #ReactTS
 - 💞️ I’m looking to collaborate on ...
 - 📫 How to reach me ..
 
