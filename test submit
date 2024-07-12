@@ -1,0 +1,17 @@
+ const onSubmit = (data: IAddUserToWallet) => {
+    // Update permissions array before submitting
+    const permissions = [];
+    if (isUser) permissions.push("User");
+    if (isAdmin) permissions.push("Administrator");
+    data.permission = permissions;
+
+    const payload = {
+      subscriberId: data.subscriberId,
+      username: data.username,
+      walletId: data.walletId,
+      permission: data.permission
+    };
+
+    console.log("Payload being submitted", payload);
+    onAdd(payload);
+  };
