@@ -15,3 +15,17 @@
     console.log("Payload being submitted", payload);
     onAdd(payload);
   };
+
+
+const onSubmit = (data: IAddUserToWallet) => {
+  // Hardcode the payload to test the structure
+  const hardcodedData: IAddUserToWallet = {
+    subscriberId: 123,
+    username: data.username,
+    walletId: data.walletId,
+    permission: ["User", "Administrator"]
+  };
+
+  console.log("Hardcoded Data being submitted", hardcodedData);
+  onAdd(hardcodedData);
+};
