@@ -1,0 +1,25 @@
+import React, { useEffect } from 'react';
+import useGetUsersOnWallet from './useGetUsersOnWallet';
+import { useGlobalState } from './GlobalState';
+
+const YourComponent: React.FC = () => {
+  const { data, isLoading, error } = useGetUsersOnWallet();
+  const { refetchProfile } = useGlobalState();
+
+  useEffect(() => {
+    // Optionally refetch profile data on mount or at other times
+    refetchProfile();
+  }, [refetchProfile]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      <h1>Users on Wallet</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+};
+
+export default YourComponent;
