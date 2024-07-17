@@ -1,0 +1,176 @@
+import React, { useEffect, useState } from "react";
+import Modal, { ModalProps } from "../Modal";
+import ModalHeader from "../ModalHeader";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import OutLinedButton from "../../buttons/OutLinedButton";
+import SolidButton from "../../buttons/SolidButton";
+import UpdateAddressStyle from "../updateModals/UpdateDeliveryAddressModal.module.css";
+import { FormProvider, useForm } from "react-hook-form";
+import FormLabel from "../../label/FormLabel";
+import { Input } from "../../textfield/Input";
+import FormStyles from "../../FormFields.module.css";
+import { IAddUserToWallet } from "../../interface/IAddUserToWallet";
+import Dropdown from "../../dropdown/Dropdown";
+import useGetUsersOnWallet from "../../../hooks/useGetUsersOnWallet";
+import Checkbox from "../../checkbox/Checkbox";
+import useEwallets from "../../../hooks/useEwallets";
+
+interface AddProps extends ModalProps {
+  onAdd: (data: IAddUserToWallet) => void;
+}
+
+const AddUser: React.FC<AddProps> = ({ isOpen, onClose, onAdd }) => {
+  const [ewallet, setEwallet] = useState<number | undefined>();
+  const { data: ewalletData } = useEwallets(ewallet);
+  const methods = useForm<IAddUserToWallet>();
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isDirty, setError, clearErrors } } = methods;
+
+  // Fetch users on wallet
+  const { data: usersOnWallet } = useGetUsersOnWallet(ewallet);
+
+  // Local state for managing checkboxes
+  const [isUser, setIsUser] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const handleCancelClick = () => {
+    if (onClose) onClose();
+    reset();
+  };
+
+  const validatePermissions = () => {
+    if (!isUser && !isAdmin) {
+      setError("permissions", {
+        type: "manual",
+        message: "At least one permission must be selected"
+      });
+      return false;
+    }
+    clearErrors("permissions");
+    return true;
+  };
+
+  const onSubmit = (data: IAddUserToWallet) => {
+    if (!validatePermissions()) {
+      return;
+    }
+
+    // Update permissions array before submitting
+    const permissions = [];
+    if (isUser) permissions.push("User");
+    if (isAdmin) permissions.push("Administrator");
+    data.permission = permissions;
+
+    // Check if the username is already on the wallet
+    const usernameExists = usersOnWallet?.some(user => user.username === data.username);
+
+    if (usernameExists) {
+      setError("username", {
+        type: "manual",
+        message: "This username is already associated with the selected wallet."
+      });
+      return;
+    }
+
+    const payload = {
+      subscriberId: data.subscriberId,
+      username: data.username,
+      walletId: data.walletId,
+      permission: data.permission
+    };
+
+    console.log("Payload being submitted", payload);
+    onAdd(payload);
+  };
+
+  useEffect(() => {
+    register("permission", {
+      validate: value => value.length > 0 || "At least one permission must be selected"
+    });
+  }, [register]);
+
+  useEffect(() => {
+    const permissions = [];
+    if (isUser) permissions.push("User");
+    if (isAdmin) permissions.push("Administrator");
+    setValue("permission", permissions);
+
+    if (isUser || isAdmin) {
+      clearErrors("permissions");
+    }
+  }, [isUser, isAdmin, setValue, clearErrors]);
+
+  // Combine users and ewallet data
+  const combinedData = ewalletData?.map((wallet) => ({
+    value: wallet.id.toString(),
+    label: wallet.accountIdentifier,
+  }));
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal className={UpdateAddressStyle.modal} isOpen={isOpen} onClose={onClose}>
+      <ModalHeader title="Add User" onClose={onClose} />
+      <FormProvider {...methods}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <hr className="solid" />
+          <ModalBody>
+            <div className={UpdateAddressStyle.generalInfo}>
+              <div className={UpdateAddressStyle["input-column"]}>
+                <FormLabel id="username" label="User Name(s)" />
+                <Input {...register("username", { required: true })} />
+                {errors.username && <p className={FormStyles.errors}>{errors.username.message}</p>}
+              </div>
+              <div className={UpdateAddressStyle["input-column"]}>
+                <FormLabel id="accountIdentifier" label="Account Identifier" />
+                <Dropdown
+                  id="accountIdentifier"
+                  selectedOption={ewallet?.toString() || ""}
+                  onChange={(value) => setEwallet(Number(value))}
+                  options={combinedData}
+                />
+              </div>
+              <div className={UpdateAddressStyle["input-column"]}>
+                <FormLabel id="permissions" label="Permission" />
+                <div className={UpdateAddressStyle.checkboxContainer}>
+                  <Checkbox
+                    label="User"
+                    checked={isUser}
+                    onChange={(e) => {
+                      setIsUser(e.target.checked);
+                      if (!e.target.checked && isAdmin) {
+                        setIsAdmin(false);
+                      }
+                    }}
+                    disabled={isAdmin}
+                  />
+                  <Checkbox
+                    label="Administrator"
+                    checked={isAdmin}
+                    onChange={(e) => {
+                      setIsAdmin(e.target.checked);
+                      if (e.target.checked) {
+                        setIsUser(true);
+                      }
+                    }}
+                  />
+                </div>
+                {errors.permissions && <p className={FormStyles.errors}>{errors.permissions.message}</p>}
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter className={UpdateAddressStyle.modalFooter}>
+            <OutLinedButton className={UpdateAddressStyle.outlined} onClick={handleCancelClick} type="button">
+              Cancel
+            </OutLinedButton>
+            <SolidButton className={UpdateAddressStyle.solidBtn} type="submit" disabled={!isDirty}>
+              Add User
+            </SolidButton>
+          </ModalFooter>
+        </form>
+      </FormProvider>
+    </Modal>
+  );
+};
+
+export default AddUser;
