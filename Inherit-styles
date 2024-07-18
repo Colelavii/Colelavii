@@ -1,0 +1,36 @@
+/* styles.module.css */
+
+/* Base modal styles */
+.modal {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific styles for adding a user */
+.modalUser {
+  background-color: #f0f0f0;
+  color: #333;
+}
+import React from 'react';
+import styles from './styles.module.css';
+
+interface ModalProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Modal: React.FC<ModalProps> = ({ children, className }) => {
+  return <div className={`${styles.modal} ${className}`}>{children}</div>;
+};
+
+interface ModalUserProps {
+  children: React.ReactNode;
+}
+
+const ModalUser: React.FC<ModalUserProps> = ({ children }) => {
+  return <Modal className={styles.modalUser}>{children}</Modal>;
+};
+
+export { Modal, ModalUser };
