@@ -1,0 +1,261 @@
+import React, { useEffect, useState } from "react";
+import Modal, { ModalProps } from "../Modal";
+import ModalHeader from "../ModalHeader";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import OutLinedButton from "../../buttons/OutLinedButton";
+import SolidButton from "../../buttons/SolidButton";
+import ModalStyles from "../Modal.module.css";
+import { FormProvider, useForm } from "react-hook-form";
+import FormLabel from "../../label/FormLabel";
+import { Input } from "../../textfield/Input";
+import FormStyles from "../../FormFields.module.css";
+import useGetUsersOnWallet, {
+  IGetUsersOnWallet,
+} from "../../../hooks/useGetUsersOnWallet";
+import Checkbox from "../../checkbox/Checkbox";
+import UserWalletDropdown from "../../dropdown/UserWalletDropdown";
+import useGetWalletOnAccount from "../../../hooks/useGetWalletOnAccount";
+
+interface EditProps extends ModalProps {
+  users: IGetUsersOnWallet | undefined;
+  //onUpdate: (data: IGetUsersOnWallet & { user: string }) => void;
+}
+
+const EditUserModal: React.FC<EditProps> = ({
+  isOpen,
+  onClose,
+  users,
+  //onUpdate,
+}) => {
+  const methods = useForm<IGetUsersOnWallet>({ defaultValues: users || {} });
+  const {
+    register,
+    watch,
+    setValue,
+    setError,
+    clearErrors,
+    handleSubmit,
+    reset, // Used to reset the form with new default values
+    formState: { errors, isDirty },
+  } = methods;
+
+  //  Local state for managing checkboxes
+  const [isUser, setIsUser] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  // const [walletId, setWalletId] = useState<string | undefined>(undefined);
+
+  const { data: walletsOnAccount } = useGetWalletOnAccount();
+
+  //  Fetch users on wallet (gives access to the accountIdentifier)
+  const { data: usersOnWallet } = useGetUsersOnWallet();
+
+  const username = users?.userName;
+  const accountIdentifier = users?.accountIdentifier;
+
+  //  Check if the accountIdentifier on the selected wallet matches the accountIdentifier for wallets
+  //  on the logged in account and gets the id for that wallet to set the field
+  useEffect(() => {
+    const wallet = walletsOnAccount?.find(
+      (wallet) => wallet.accountIdentifier === accountIdentifier
+    );
+    if (isOpen && wallet) {
+      console.log("walletData", wallet);
+      setValue("walletId", wallet.walletId);
+      console.log("walletID", wallet.walletId);
+    }
+  }, [accountIdentifier]);
+  useEffect(() => {
+    if (isOpen && usersOnWallet) {
+      const user = usersOnWallet.find((user) => user.userName === username);
+      if (user) {
+        setValue("name", user.name);
+        setValue("userName", user.userName);
+        setValue("accountIdentifier", user.accountIdentifier);
+
+        console.log("main", user.accountIdentifier);
+
+        setIsUser(user.permission.includes("User"));
+        setIsAdmin(user.permission.includes("Administrator"));
+        console.log("Raw", user.permission);
+      }
+    } else {
+      reset();
+    }
+  }, [isOpen, username, usersOnWallet, setValue, reset]);
+
+  const selectedWallet = watch("walletId");
+
+  const selectedPermission = watch("permission");
+
+  const handleCancelClick = () => {
+    if (onClose) onClose();
+    reset();
+  };
+
+  //  Checks for permission, does manual errorHandling
+  const validatePermissions = () => {
+    if (!isUser && !isAdmin) {
+      setError("permission", {
+        type: "manual",
+        message: "At least one permission must be selected.",
+      });
+      return false;
+    }
+    clearErrors("permission");
+    return true;
+  };
+
+  const onSubmit = (data: IGetUsersOnWallet) => {
+    if (!validatePermissions()) {
+      return;
+    }
+
+    //  Update permissions array before submitting
+    const permissions = [];
+    if (isUser) permissions.push("user");
+    if (isAdmin) permissions.push("administrator");
+    data.permission = permissions;
+
+    // Check if the username is already on the wallet
+    const usernameExists = usersOnWallet?.some(
+      (user) => user.userName === data.userName
+    );
+
+    if (usernameExists) {
+      //alert("This username is already associated with the selected wallet.");
+
+      setError("accountIdentifier", {
+        type: "manual",
+        message:
+          "This username is already associated with the selected wallet.",
+      });
+      return;
+    }
+  };
+
+  //  Ensures all registers work insync (without this only username and ewallet errors will show).
+  useEffect(() => {
+    register("permission", {
+      validate: (value) =>
+        value.length > 0 || "Atleast one permission must be selected.",
+    });
+  }, [register]);
+
+  //  Clears error message for permission when either is selected.
+  useEffect(() => {
+    const permissions = [];
+    if (isUser) permissions.push("user");
+    if (isAdmin) permissions.push("administrator");
+    setValue("permission", permissions);
+
+    if (isUser || isAdmin) {
+      clearErrors("permission");
+    }
+  }, [isUser, isAdmin, setValue, clearErrors]);
+
+  if (!isOpen) return null;
+  return (
+    <Modal className={ModalStyles.modal} isOpen={isOpen} onClose={onClose}>
+      <ModalHeader title="Edit User" onClose={onClose} />
+      <FormProvider {...methods}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <hr className="solid" />
+
+          <ModalBody>
+            <div className={ModalStyles["modal-addUser"]}>
+              <div className={FormStyles["input-column"]}>
+                {" "}
+                <FormLabel id="username" label="User Name" />
+                <Input
+                  id="username"
+                  {...register("userName", { required: true })}
+                  disabled
+                />
+              </div>
+              <div className={FormStyles["input-column"]}>
+                {" "}
+                <FormLabel id="name" label="Full Name" />
+                <Input
+                  id="name"
+                  {...register("name", { required: true })}
+                  disabled
+                />
+              </div>
+              <div className={FormStyles["input-column"]}>
+                <FormLabel id="walletId" label="eWallet" />
+                <UserWalletDropdown
+                  id="walletId"
+                  // selectedOption={selectedWallet}
+                  {...register("walletId", {
+                    required: true,
+                  })}
+                />
+                {errors.walletId?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The eWallet field is required
+                  </p>
+                )}
+              </div>
+              <div className={FormStyles["input-column"]}>
+                <FormLabel id="permission" label="Permission" />
+                <div className={FormStyles.checkboxContainer}>
+                  <Checkbox
+                    id="permission"
+                    label="Administrator"
+                    checked={isAdmin}
+                    onChange={(e) => {
+                      setIsAdmin(e.target.checked);
+                      if (e.target.checked) {
+                        setIsUser(true); // When the Administrator checkbox is selected the User is checked also
+                      }
+                    }}
+                  />
+                  {/* <FormLabel id="user"> */}
+                  <Checkbox
+                    id="permission"
+                    label="User"
+                    checked={isUser}
+                    onChange={(e) => {
+                      setIsUser(e.target.checked);
+                      if (!e.target.checked && isAdmin) {
+                        setIsAdmin(false); // When the Administrator checkbox is unchecked the User is enabled again
+                      }
+                    }}
+                    disabled={isAdmin} // When the Administrator checkbox is selected the User checkbox is disabled
+                  />
+                  {/* </FormLabel> */}
+                </div>
+                {errors.permission && (
+                  <p className={FormStyles.errors}>
+                    {" "}
+                    {errors.permission.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </ModalBody>
+
+          <ModalFooter className={ModalStyles.modalFooter}>
+            <OutLinedButton
+              className={FormStyles.outlined}
+              onClick={handleCancelClick}
+              type="button"
+            >
+              Cancel
+            </OutLinedButton>
+            <SolidButton
+              className={FormStyles.solidBtn}
+              type="submit"
+              disabled={!isDirty}
+            >
+              Save
+            </SolidButton>
+          </ModalFooter>
+        </form>
+      </FormProvider>
+    </Modal>
+  );
+};
+
+export default EditUserModal;
