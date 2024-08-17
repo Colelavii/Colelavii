@@ -1,0 +1,220 @@
+import React from "react";
+import Modal, { ModalProps } from "../Modal";
+import ModalHeader from "../ModalHeader";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import OutLinedButton from "../../buttons/OutLinedButton";
+import SolidButton from "../../buttons/SolidButton";
+import ModaleStyles from "../Modal.module.css";
+import FormStyles from "../../FormFields.module.css";
+import { FormProvider, useForm } from "react-hook-form";
+import FormLabel from "../../label/FormLabel";
+import { Input } from "../../textfield/Input";
+import { IRecipients } from "../../../react-query/services/recipientService";
+import TitleDropdown from "../../TitleDropdown";
+import useUpdateRecipient from "../../../react-query/services/hooks/useUpdateRecipient";
+import useProfile from "../../../hooks/useProfile";
+import { toast } from "react-toastify";
+
+interface UpdateProps extends ModalProps {
+  tile: IRecipients | undefined;
+  onUpdate: () => void;
+}
+const UpdateRecipientModal: React.FC<UpdateProps> = ({
+  isOpen,
+  onClose,
+  isLoading,
+  tile,
+  onUpdate,
+}) => {
+  const methods = useForm<IRecipients>({ defaultValues: tile || {} });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isDirty },
+  } = methods;
+
+  const { mutate: updateAddress, isLoading: isUpdating, error: UpdateError } = useUpdateRecipient();
+  const { data: profile } = useProfile();
+
+  const selectedTitle = watch("person.title");
+
+  const handleCancelClick = () => {
+    if (onClose) onClose();
+    reset();
+  };
+  const onSubmit = (data: IRecipients) => {
+    if (profile?.subscriberId && tile?.id) {
+      updateAddress(
+        {
+          recipient: data,
+          subscriberId: profile.subscriberId,
+          recipientId: tile.id,
+        },
+        {
+          onSuccess: () => {
+            onUpdate();
+            toast.success("Recipient updated successfully!");
+            handleCancelClick();
+          },
+          onError: (error) => {
+            toast.error(`Error updating recipient - ${error}`);
+            handleCancelClick();
+            console.error("Failed to update delivery:", error);
+          },
+        }
+      );
+    }
+  };
+
+  return (
+    <Modal className={ModaleStyles.modal} isOpen={isOpen}>
+      <ModalHeader title="Update Recipient" onClose={handleCancelClick} />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <FormProvider {...methods}>
+          <hr className="solid" />
+
+          <ModalBody>
+            {isUpdating && <span className="loader"></span>}
+            <div className={FormStyles.formGrid}>
+              <div className={FormStyles["input-column"]}>
+                {" "}
+                <FormLabel id="title" label="Title" />
+                <TitleDropdown
+                  selectedTitle={selectedTitle}
+                  {...register("person.title", { required: true })}
+                />
+                {errors.person?.title?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The Title field is required
+                  </p>
+                )}
+                {errors.person?.title?.type === "minLength" && (
+                  <p className={FormStyles.errors}>
+                    Must be atleast 3 characters
+                  </p>
+                )}
+                {errors.person?.title?.type === "maxLength" && (
+                  <p className={FormStyles.errors}>
+                    Must not exceed 25 characters
+                  </p>
+                )}
+              </div>
+
+              <div className={FormStyles["input-column"]}>
+                {" "}
+                <FormLabel id="firstName" label="First Name" />
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="First Name"
+                  {...register("person.firstName", {
+                    required: true,
+                    minLength: 2,
+                    maxLength: 25,
+                  })}
+                />
+                {errors.person?.firstName?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The First Name field is required
+                  </p>
+                )}
+                {errors.person?.firstName?.type === "minLength" && (
+                  <p className={FormStyles.errors}>
+                    Must be atleast 2 characters
+                  </p>
+                )}
+                {errors.person?.firstName?.type === "maxLength" && (
+                  <p className={FormStyles.errors}>
+                    Must not exceed 25 characters
+                  </p>
+                )}
+              </div>
+              <div className={FormStyles["input-column"]}>
+                {" "}
+                <FormLabel id="lastName" label="Last Name" />
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Last Name"
+                  {...register("person.lastName", {
+                    required: true,
+                    minLength: 2,
+                    maxLength: 25,
+                  })}
+                />
+                {errors.person?.lastName?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The Last Name field is required
+                  </p>
+                )}
+                {errors.person?.lastName?.type === "minLength" && (
+                  <p className={FormStyles.errors}>
+                    Must be atleast 3 characters
+                  </p>
+                )}
+                {errors.person?.lastName?.type === "maxLength" && (
+                  <p className={FormStyles.errors}>
+                    Must not exceed 25 characters
+                  </p>
+                )}
+              </div>
+              <div className={FormStyles["input-column"]}>
+                {" "}
+                <FormLabel id="number" label="Number" />
+                <Input
+                  id="number"
+                  type="number"
+                  placeholder="Number"
+                  {...register("number.number", {
+                    required: true,
+                    minLength: 7,
+                    maxLength: 11,
+                  })}
+                />
+                {errors.number?.number?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The First Name field is required
+                  </p>
+                )}
+                {errors.number?.number?.type === "minLength" && (
+                  <p className={FormStyles.errors}>
+                    Must be atleast 7 characters
+                  </p>
+                )}
+                {errors.number?.number?.type === "maxLength" && (
+                  <p className={FormStyles.errors}>
+                    Must not exceed 11 characters
+                  </p>
+                )}
+              </div>
+            </div>{" "}
+          </ModalBody>
+
+          <ModalFooter className={ModaleStyles.modalFooter}>
+            <OutLinedButton
+              className={FormStyles.outlined}
+              onClick={handleCancelClick}
+              type="button"
+            >
+              Cancel
+            </OutLinedButton>
+            <SolidButton
+              className={`${FormStyles.solidBtn} ${
+                isUpdating && FormStyles.disabled
+              }`}
+              type="submit"
+              disabled={!isDirty || isUpdating}
+            >
+              {isUpdating ? "Updating..." : "Update"}
+            </SolidButton>
+          </ModalFooter>
+        </FormProvider>
+      </form>
+    </Modal>
+  );
+};
+
+export default UpdateRecipientModal;
