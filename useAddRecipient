@@ -1,0 +1,61 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CACHE_KEY_RECIPIENTS } from "./../../../Variables";
+import recipientService, { IRecipients } from "../recipientService";
+
+interface AddRecipientsContext {
+  previousRecipients: IRecipients[];
+}
+
+interface AddRecipientParams {
+  subscriberId: string;
+  data: IRecipients;
+}
+
+const useAddRecipient = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<IRecipients, Error, AddRecipientParams, AddRecipientsContext>({
+    mutationFn: ({ subscriberId, data }) => recipientService.create(subscriberId, data),
+
+    onMutate: async ({ subscriberId, data }) => {
+      await queryClient.cancelQueries([CACHE_KEY_RECIPIENTS, subscriberId]);
+
+      const previousRecipients =
+        queryClient.getQueryData<IRecipients[]>([CACHE_KEY_RECIPIENTS, subscriberId]) || [];
+
+      queryClient.setQueryData<IRecipients[]>(
+        [CACHE_KEY_RECIPIENTS, subscriberId],
+        (recipients = []) => [data, ...recipients]
+      );
+
+      return { previousRecipients };
+    },
+
+    onSuccess: (savedRecipient, { subscriberId, data }) => {
+      queryClient.setQueryData<IRecipients[]>(
+        [CACHE_KEY_RECIPIENTS, subscriberId],
+        (recipients) =>
+          recipients?.map((recipient) =>
+            recipient === data ? savedRecipient : recipient
+          )
+      );
+    },
+
+    onError: (error, { subscriberId }, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData<IRecipients[]>(
+        [CACHE_KEY_RECIPIENTS, subscriberId],
+        context.previousRecipients
+      );
+    },
+
+    onSettled: (_data, variables) => {
+      if (variables?.subscriberId) {
+        queryClient.invalidateQueries([CACHE_KEY_RECIPIENTS, variables.subscriberId]);
+      }
+    },
+  });
+};
+
+export default useAddRecipient;
