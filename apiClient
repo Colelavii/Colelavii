@@ -1,0 +1,98 @@
+import axios, { AxiosInstance, AxiosResponse, CanceledError } from "axios";
+
+// Creating a generic type for the API client
+interface Entity {
+  id: number;
+}
+
+// Error handling utility
+const handleError = (error: any) => {
+  if (axios.isCancel(error)) {
+    throw new CanceledError("Request canceled");
+  }
+  const errorMessage = error.response?.data?.message || "An unexpected error occurred";
+  throw new Error(errorMessage);
+};
+
+// Axios instance configuration
+export const axiosInstance: AxiosInstance = axios.create({
+  baseURL: process.env.REACT_APP_API_BASE_URL || "https://int-dev.cojamaica.com/am/api/v1",
+  // headers: {
+  //   'api-key' : process.env.REACT_APP_API_KEY || '...',
+  // }
+});
+
+export { CanceledError };
+
+class APIClient<T> {
+  protected endpoint: string;
+
+  constructor(endpoint: string) {
+    this.endpoint = endpoint;
+  }
+
+  // Generic GET method with support for query parameters and cancelable requests
+  getAll = async (params?: Record<string, any>, cancelToken?: AbortController): Promise<T[]> => {
+    try {
+      const response = await axiosInstance.get<T[]>(this.endpoint, {
+        params,
+        signal: cancelToken?.signal,
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  // Generic POST method
+  create = async (data: T): Promise<T> => {
+    try {
+      const response: AxiosResponse<T> = await axiosInstance.post<T>(this.endpoint, data);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  // Generic PUT method
+  update = async (id: number, data: T): Promise<T> => {
+    try {
+      const response: AxiosResponse<T> = await axiosInstance.put<T>(`${this.endpoint}/${id}`, data);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  // Generic PATCH method
+  patch = async (entity: Partial<T> & Entity): Promise<T> => {
+    try {
+      const response: AxiosResponse<T> = await axiosInstance.patch<T>(`${this.endpoint}/${entity.id}`, entity);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  // Generic DELETE method
+  delete = async (id: string | number): Promise<void> => {
+    try {
+      await axiosInstance.delete(`${this.endpoint}/${id}`);
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  // Example of a custom delete method specific to an endpoint with multiple parameters
+  deleteRecipient = async (subscriberId: string, recipientId: string): Promise<void> => {
+    try {
+      await axiosInstance.delete(`${this.endpoint}/DeleteRecipientById`, {
+        params: { subscriberId, recipientId },
+      });
+    } catch (error) {
+      handleError(error);
+    }
+  };
+}
+
+export default APIClient;
