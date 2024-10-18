@@ -1,0 +1,418 @@
+.sidebar {
+  display: flex;
+  background: #091c58;
+  color: #ffffff;
+  padding: 25px;
+  padding-top: 45px;
+  width: 100px; /* Default width when closed*/
+  /*height: calc(100vh - 100px); /* Adjust based on header height*/
+  transition: width 0.3s ease;
+  overflow: hidden;
+  box-shadow: 4px 2px 8px 0px #00000040;
+  z-index: 1;
+}
+nav ul {
+  list-style: none;
+  padding: 0;
+}
+nav h2 {
+  margin-top: 2rem;
+  transition: text-align 0.3s ease, opacity 0.3s ease;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: 0em;
+}
+
+nav li {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+nav li a.active {
+  justify-content: center;
+  background-color: #fff;
+  color: #1d3083;
+  border-radius: 5px;
+  width: 100%;
+}
+nav li:hover {
+  color: #ffbd19;
+}
+
+.sidebar-btn {
+  background-color: #ffbd19;
+  color: #091c58;
+  border: none;
+  border-radius: 8px;
+  height: 40px;
+  width: 155px;
+  padding: 5px;
+  font-family: Poppins;
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.open {
+  width: 300px; /* Width when sidebar is open*/
+}
+.open h2 {
+  text-align: left;
+}
+.closed {
+  width: 100px; /* Width when sidebar is closed */
+}
+.closed h2 {
+  text-align: center;
+}
+.sidebar-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  text-decoration: none;
+  color: white;
+}
+
+.sidebar-icon {
+  font-size: 30px;
+}
+
+.sidebar-item:hover {
+  color: #ffbd19;
+}
+.sidebar-title {
+  display: inline-block;
+  margin-left: 5px;
+  font-family: Poppins;
+  font-size: 18px;
+}
+
+/* Tooltips */
+.sidebar-item[data-title]:hover::after {
+  content: attr(data-title);
+  position: absolute;
+  background-color: #091c58;
+  color: #fff;
+  padding: 5px;
+  border-radius: 5px;
+  left: 120px; /* Adjust the left position */
+}
+
+.sidebar-item:hover::before {
+  visibility: visible;
+  opacity: 1;
+}
+@media (max-width: 768px) {
+  .sidebar {
+    width: 80px; /* Slightly smaller width*/
+    height: calc(100vh - 50px);
+  }
+
+  .open {
+    width: 200px; /* Smaller expanded width on mobile*/
+  }
+}
+
+import { AiOutlineAppstore, AiOutlineBook } from "react-icons/ai";
+import { Link, NavLink } from "react-router-dom";
+import { FiHome, FiSettings } from "react-icons/fi"; // Import icons from react-icons/fi
+import { LuMails, LuStamp } from "react-icons/lu";
+import {
+  PiShoppingCart,
+  PiNotePencilDuotone,
+  PiClipboardText,
+  PiWechatLogoBold,
+  PiHandCoins,
+} from "react-icons/pi";
+import { BiRegistered, BiSearchAlt, BiPhoneCall } from "react-icons/bi";
+import { SlLocationPin } from "react-icons/sl";
+import SolidButton from "../buttons/SolidButton";
+import styles from "./Sidebar.module.css";
+
+interface SidebarProps {
+  isOpen: boolean;
+}
+
+const Sidebar = ({ isOpen }: SidebarProps) => {
+  return (
+    <aside
+      className={`${styles.sidebar} ${
+        isOpen ? `${styles.open}` : `${styles.closed}`
+      }`}
+    >
+      <nav>
+        <ul>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Dashboard"}
+            >
+              <FiHome className={styles["sidebar-icon"]} />
+
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Dashboard</span>
+              )}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="applications"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Applications"}
+            >
+              <AiOutlineAppstore className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>My Applications</span>
+              )}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/message"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Messages"}
+            >
+              <LuMails className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>My Messages</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="https://int-dev.cojamaica.com:444/payment-portal/dummycheckout.html"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Cart"}
+            >
+              <PiShoppingCart className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>My Cart</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="settingsLayout"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Settings"}
+            >
+              <FiSettings className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Settings</span>
+              )}
+            </NavLink>
+          </li>
+          <h2>SERVICES</h2>
+          <li>
+            <NavLink
+              to="/about"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Name Reservation"}
+            >
+              <PiNotePencilDuotone className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>
+                  Name Reservation
+                </span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Registration"}
+            >
+              <BiRegistered className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Registration</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Search"}
+            >
+              <BiSearchAlt className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Search</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Tracking"}
+            >
+              <SlLocationPin className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Tracking</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Validation"}
+            >
+              <LuStamp className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Validation</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Entity Listing"}
+            >
+              <PiClipboardText className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Entity Listing</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <h2>HELP</h2>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Guides"}
+            >
+              <AiOutlineBook className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Guides</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "FAQs"}
+            >
+              <PiWechatLogoBold className={styles["sidebar-icon"]} />
+              {isOpen && <span className={styles["sidebar-title"]}>FAQs</span>}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Fees"}
+            >
+              <PiHandCoins className={styles["sidebar-icon"]} />
+              {isOpen && <span className={styles["sidebar-title"]}>Fees</span>}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              data-title={isOpen ? null : "Contact"}
+            >
+              <BiPhoneCall className={styles["sidebar-icon"]} />
+              {isOpen && (
+                <span className={styles["sidebar-title"]}>Contact</span>
+              )}
+            </NavLink>{" "}
+          </li>
+          <li>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles["sidebar-item"]} ${styles["active"]}`
+                  : styles["sidebar-item"]
+              }
+              title="Chat"
+            >
+              {isOpen && (
+                <SolidButton className={styles["sidebar-btn"]}>
+                  Chat with us
+                </SolidButton>
+                // <button className="sidebar-btn" type="button">
+                //   Chat with us
+                // </button>
+              )}
+            </NavLink>{" "}
+          </li>
+        </ul>
+      </nav>
+    </aside>
+  );
+};
+export default Sidebar;
