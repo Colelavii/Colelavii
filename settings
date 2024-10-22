@@ -1,0 +1,222 @@
+import React from "react";
+import "./settings.css";
+import Breadcrumbs from "../../components/eservice/Breadcrumbs";
+import { FaRegRegistered } from "react-icons/fa";
+import { NavLink, Outlet } from "react-router-dom";
+import { BsPersonCircle } from "react-icons/bs";
+import { useFetchProfileDetails } from "../../hooks/useProfile";
+import PageLayout from "../../components/layout/PageLayout";
+
+interface ISettingsData {
+  to: string;
+  title: string;
+}
+
+const settingsData: Record<string, ISettingsData[]> = {
+  account: [
+    {
+      to: "Profile",
+      title: "Profile",
+    },
+    {
+      to: "Security",
+      title: "Security",
+    },
+    {
+      to: "Delivery",
+      title: "Delivery",
+    },
+    {
+      to: "Recipients",
+      title: "Recipients",
+    },
+    {
+      to: "Notifications",
+      title: "Notifications",
+    },
+  ],
+  wallet: [
+    {
+      to: "Ewallet",
+      title: "My eWallet",
+    },
+    {
+      to: "Users",
+      title: "Users",
+    },
+    {
+      to: "PaymentHistory",
+      title: "Payment History",
+    },
+  ],
+};
+
+const SettingsLayout = () => {
+  const { data: profile } = useFetchProfileDetails();
+
+  const Section: React.FC<{ sectionName: string; data: ISettingsData[] }> = ({
+    sectionName,
+    data,
+  }) => (
+    <div className="account-section">
+      <h1>{sectionName}</h1>
+      <ul>
+        {data.map((item, index) => (
+          <li key={index} className="account-list">
+            <NavLink to={item.to}>{item.title}</NavLink>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+  return (
+
+    <PageLayout breadcrumb={<Breadcrumbs />} title="Settings">
+      <div className="HStack">
+        <div className="settings-menu">
+          <BsPersonCircle className="settings-icon" />
+          <div className="user-info">
+            <h1>{profile?.firstName}</h1> {/*SHOULD BE DYNAMIC */}
+            <h5>Basic User</h5>
+          </div>
+          <hr className="solid" />
+          <Section sectionName="ACCOUNT" data={settingsData.account} />
+          <hr className="solid" />
+          <Section sectionName="WALLET" data={settingsData.wallet} />
+        </div>
+        {/* used to display the selected menu option */}
+        <main className="setOutlet">
+          <Outlet />
+        </main>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default SettingsLayout;
+
+.settings-container {
+  position: relative;
+  /* background-color: aqua; */
+  background-color: #ffffff;
+  width: 100%;
+  height: 1258px;
+}
+.settings-header {
+  position: absolute;
+  left: 5rem;
+  padding-top: 1rem;
+  /* background-color: aqua; */
+}
+.settings-header > h1 {
+  font-family: Roboto;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 56px;
+  letter-spacing: 0em;
+  text-align: left;
+}
+.settings-menu {
+  /* position: relative; */
+  padding-top: 1rem;
+  background-color: #ffffff;
+  width: 284px;
+  height: 550px;
+  /* top: 150px;
+  left: 3rem; */
+  border-radius: 6px;
+  border: 1px solid #e9e5e5;
+  overflow: hidden;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+.settings-menu ul {
+  list-style-type: none;
+}
+/* .HStack {
+  display: flex;
+  justify-content: space-evenly;
+} */
+.setOutlet {
+  position: absolute;
+  top: 150px;
+  left: 390px;
+}
+.setOutlet-content {
+  width: 780px;
+  border-radius: 6px;
+  border: 1px;
+  padding: 1rem;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+  background-color: #ffffff;
+}
+.titles {
+  font-family: Roboto;
+  font-size: 22px;
+  font-weight: 500;
+  text-align: left;
+  color: #232222;
+  margin-left: 1rem;
+}
+.settings-icon {
+  width: 48px;
+  height: 43.35px;
+  margin-left: 2rem;
+  color: #1d3083;
+}
+.user-info {
+  display: inline-block;
+  align-items: center;
+  padding-left: 1rem;
+}
+.user-info h1 {
+  font-family: Poppins;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 30px;
+  letter-spacing: 0em;
+  text-align: left;
+}
+
+.user-info h5 {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 21px;
+  letter-spacing: 0em;
+  text-align: left;
+  color: #a7a7a7;
+}
+
+.account-section {
+  margin-left: 2rem;
+}
+.account-section li a.active,
+.account-section li:hover {
+  color: #1d3083;
+  font-weight: 600;
+}
+
+.account-section h1,
+.wallet-section h1 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: 0.31em;
+  text-align: left;
+  color: #232222;
+  margin-bottom: 1rem;
+}
+.wallet-section {
+  margin-left: 2rem;
+}
+
+.wallet-list,
+.account-list {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 27px;
+  letter-spacing: 0em;
+  text-align: left;
+  color: #363636;
+  margin-left: 1rem;
+  margin-bottom: 1rem;
+}
