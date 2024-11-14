@@ -1,0 +1,251 @@
+import { FormProvider, useForm } from "react-hook-form";
+import FormLabel from "../../label/FormLabel";
+import { Input } from "../../textfield/Input";
+import FormStyles from "../../FormFields.module.css";
+import ModalHeader from "../ModalHeader";
+import ModalBody from "../ModalBody";
+import Modal, { ModalProps } from "../Modal";
+import ModalFooter from "../ModalFooter";
+import OutLinedButton from "../../buttons/OutLinedButton";
+import SolidButton from "../../buttons/SolidButton";
+import { IEwallet } from "../../../hooks/useEwallets";
+import ModalStyles from "../Modal.module.css";
+import { useWalletContext } from "../../../state-management/contexts/walletContext";
+
+const EditEwalletAliasModal = () => {
+  const { selectedWallet, isAliasModalOpen, updateAlias, closeModals } =
+    useWalletContext();
+  const methods = useForm<IEwallet>({ defaultValues: selectedWallet || {} });
+  const {
+    register,
+    handleSubmit,
+    reset, // Used to reset the form with new default values
+    formState: { errors, isDirty },
+  } = methods;
+
+  const handleCancelClick = () => {
+    closeModals();
+    reset();
+  };
+  const onSubmit = (data: IEwallet) => {
+    if (selectedWallet) {
+      updateAlias({ ewalletId: selectedWallet.id, ...data });
+      console.log("WalletID", selectedWallet.id);
+    }
+  };
+  if (!isAliasModalOpen) return null; // Only render the modal if it's open
+
+  return (
+    <Modal className={ModalStyles.modal} isOpen={isAliasModalOpen}>
+      <ModalHeader title="Edit Ewallet Name" onClose={handleCancelClick} />
+      <FormProvider {...methods}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <hr className="solid" />
+          <ModalBody className={ModalStyles.modalBody}>
+            <div className={FormStyles["input-column"]}>
+              <FormLabel id="alias" label="eWallet Name" />
+              <Input
+                id="alias"
+                {...register("alias", {
+                  required: true,
+                  minLength: 2,
+                  maxLength: 25,
+                })}
+                type="text"
+                placeholder="eWallet Nickname"
+              />
+              {errors.alias?.type === "required" && (
+                <p className={FormStyles.errors}>
+                  The eWallet Name field is required
+                </p>
+              )}
+              {errors.alias?.type === "minLength" && (
+                <p className={FormStyles.errors}>
+                  Must be at least 2 characters
+                </p>
+              )}
+              {errors.alias?.type === "maxLength" && (
+                <p className={FormStyles.errors}>
+                  Must not exceed 25 characters
+                </p>
+              )}
+            </div>
+          </ModalBody>
+
+          <ModalFooter className={ModalStyles.modalFooter}>
+            <OutLinedButton
+              className={ModalStyles.outlined}
+              onClick={handleCancelClick}
+              type="button"
+            >
+              Cancel
+            </OutLinedButton>
+            <SolidButton
+              className={ModalStyles.solidBtn}
+              type="submit"
+              disabled={!isDirty}
+            >
+              Create
+            </SolidButton>
+          </ModalFooter>
+        </form>
+      </FormProvider>
+    </Modal>
+  );
+};
+
+export default EditEwalletAliasModal;
+import {
+  createContext,
+  Dispatch,
+  ReactNode,
+  useContext,
+  useState,
+} from "react";
+import { WalletAction, Wallets, WalletState } from "../reducers/walletReducer";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { IEwallet, useGetEwallets } from "../../hooks/useEwallets";
+import AuthContext from "./authContext";
+import axios from "axios";
+import { CACHE_KEY_EWALLETS, variables } from "../../Variables";
+import { toast } from "react-toastify";
+
+interface WalletContextType {
+  wallets: IEwallet[] | undefined;
+  isLoading: boolean;
+  error: any;
+  selectedWallet: IEwallet | undefined;
+  isPreferredModalOpen: boolean;
+  isAliasModalOpen: boolean;
+  isConfirmModalOpen: boolean;
+  handlePreferredClick: () => void;
+  handleConfirmPreferred: (preferredAccount: string | undefined) => void;
+  setPreferredWallet: (preferredAccount: string | undefined) => void;
+  openAliasModal: (wallet: IEwallet | undefined) => void;
+  openPreferredModal: (wallet: IEwallet) => void;
+  closeModals: () => void;
+  updateAlias: (alias: IEwallet & { ewalletId: number | undefined }) => void;
+  refetchWallets: () => void;
+}
+
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
+
+export const useWalletContext = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error(
+      "useWalletContext must be used within a WalletContextProvider"
+    );
+  }
+  return context;
+};
+
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const queryClient = useQueryClient();
+  const [selectedWallet, setSelectedWallet] = useState<IEwallet | undefined>(
+    undefined
+  );
+  const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
+
+  const [isAliasModalOpen, setAliasModalOpen] = useState(false);
+  const [isPreferredModalOpen, setPreferredModalOpen] = useState(false);
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
+
+  const { authState } = useContext(AuthContext);
+  //  Fetch wallets
+  const {
+    data: wallets,
+    isLoading,
+    error,
+    refetch,
+  } = useGetEwallets(authState.subscriberId, page, pageSize);
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      })
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount, {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setPreferredModalOpen(false);
+      },
+    });
+  };
+  const handlePreferredClick = () => {
+    setConfirmModalOpen(true);
+  };
+  const handleConfirmPreferred = (preferredAccount: string | undefined) => {
+    setPreferredWallet(preferredAccount);
+  };
+  const openPreferredModal = (wallet: IEwallet) => {
+    setSelectedWallet(wallet);
+    setPreferredModalOpen(true);
+  };
+  const openAliasModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setAliasModalOpen(true);
+  };
+
+  const closeModals = () => {
+    setPreferredModalOpen(false);
+    setSelectedWallet(undefined);
+    setAliasModalOpen(false);
+    setConfirmModalOpen(false);
+  };
+
+  const updateAliasMutation = useMutation(
+    async (alias: IEwallet): Promise<IEwallet> => {
+      const response = await axios.post<IEwallet>(
+        `${variables.UPDATE_ALIAS}${selectedWallet?.id}`,
+        alias
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        closeModals();
+        toast.success("Ewallet Name updated successfully!", {
+          autoClose: 3000,
+        });
+      },
+      onError: (error) => {
+        toast.error(`Error updating Ewallet Name  - ${error}`);
+      },
+    }
+  );
+
+  const updateAlias = (data: IEwallet & { ewalletId: number | undefined }) => {
+    updateAliasMutation.mutate(data);
+  };
+  const value = {
+    wallets,
+    isLoading,
+    error,
+    selectedWallet,
+    isPreferredModalOpen,
+    isAliasModalOpen,
+    isConfirmModalOpen,
+    handlePreferredClick,
+    setPreferredWallet,
+    handleConfirmPreferred,
+    openAliasModal,
+    openPreferredModal,
+    closeModals,
+    updateAlias,
+    refetchWallets: refetch,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children} </WalletContext.Provider>
+  );
+};
+
+export { WalletContext };
