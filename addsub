@@ -1,0 +1,481 @@
+when the user selects the add subscription option from the menu
+a check should be done for active subscription if greater than zero it
+should display the cautionModal in this modal we have yes submit button on
+pressing this we close the cautionModal and open the addSubscriptionModal
+now this should (create this modal) have 4 rows of radio buttons in one column
+each row has a border border: 1px solid #C4C4C4 and width: 354px;
+height: 48px;
+border-radius: 6px 0px 0px 0px;
+
+but the first row is highlighted by default border: 1px solid #274AD1 with the background: #274AD126 or background: rgba(39, 74, 209, 0.15);
+
+in each row on the left is the months and to the right is the amount
+this is how it is 3 months $ 250, 6 months $ 500, 9 months $ 750, 12 months $ 1000 (note the spaces) each should have a description 
+like Description: Activation of 3 month subscription on wallet, so idk create an object or something.  
+the add submit button should increment the cart items,do the math for the total, close addSubscriptionModal and open addtoCartModal now this modal
+has a paragraph that says Cart subtotal ({cart items}) : {total}
+the proceed btn should redirect to the cart page 
+
+Now i need to determine whether i continue with walletContext to handle all this for the ewallet components 
+
+import { createContext, ReactNode, useContext, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { IEwallet, useGetEwallets } from "../../hooks/useEwallets";
+import AuthContext from "./authContext";
+import axios from "axios";
+import { CACHE_KEY_EWALLETS, variables } from "../../Variables";
+import { toast } from "react-toastify";
+
+interface WalletContextType {
+  wallets: IEwallet[] | undefined;
+  isLoading: boolean;
+  error: any;
+  selectedWallet: IEwallet | undefined;
+  isPreferredModalOpen: boolean;
+  isAliasModalOpen: boolean;
+  setSelectedWallet: (wallet: IEwallet | undefined) => void;
+  openPreferredModal: (wallet: IEwallet | undefined) => void;
+  setPreferredWallet: (preferredAccount: string | undefined) => void;
+  openAliasModal: (wallet: IEwallet | undefined) => void;
+  closeModals: () => void;
+  updateAlias: (alias: IEwallet & { ewalletId: number | undefined }) => void;
+  refetchWallets: () => void;
+  updateAliasLoading: boolean;
+  updateAliasError: any;
+  setPreferredAccountLoading: boolean;
+  formError: string | null;
+  setFormError: (formError: string | null) => void;
+}
+
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
+
+export const useWalletContext = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error(
+      "useWalletContext must be used within a WalletContextProvider"
+    );
+  }
+  return context;
+};
+
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const queryClient = useQueryClient();
+  const [selectedWallet, setSelectedWallet] = useState<IEwallet | undefined>(
+    undefined
+  );
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isAliasModalOpen, setAliasModalOpen] = useState(false);
+  const [isPreferredModalOpen, setPreferredModalOpen] = useState(false);
+  const page = 1;
+  const pageSize = 10;
+
+  const { authState } = useContext(AuthContext);
+
+  //  Fetch wallets
+  const {
+    data: wallets,
+    isLoading,
+    error,
+    refetch,
+  } = useGetEwallets(authState.subscriberId, page, pageSize);
+
+  const openPreferredModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setPreferredModalOpen(true);
+  };
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setPreferredModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = "An error occurred";
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount);
+  };
+
+  const openAliasModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setAliasModalOpen(true);
+  };
+
+  const closeModals = () => {
+    setPreferredModalOpen(false);
+    setAliasModalOpen(false);
+    setSelectedWallet(undefined);
+    setFormError(null);
+  };
+
+  //  Mutation to update alias
+  const updateAliasMutation = useMutation(
+    async (alias: IEwallet): Promise<IEwallet> => {
+      const response = await axios.post<IEwallet>(
+        `${variables.UPDATE_ALIAS}${selectedWallet?.id}`,
+        alias
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        closeModals();
+        toast.success("Ewallet Name updated successfully!", {
+          autoClose: 3000,
+        });
+      },
+      onError: (error: any) => {
+        let errorMessage = "An error occurred";
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.walletId) {
+            errorMessage = backendError.errors.walletId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+
+  const updateAlias = (data: IEwallet & { ewalletId: number | undefined }) => {
+    updateAliasMutation.mutate(data);
+  };
+
+  const value = {
+    wallets,
+    isLoading,
+    error,
+    selectedWallet,
+    isPreferredModalOpen,
+    isAliasModalOpen,
+    setSelectedWallet,
+    openPreferredModal,
+    setPreferredWallet,
+    openAliasModal,
+    closeModals,
+    updateAlias,
+    refetchWallets: refetch,
+    updateAliasLoading: updateAliasMutation.isLoading,
+    updateAliasError: updateAliasMutation.error,
+    setPreferredAccountLoading: setPreferredWalletMutation.isLoading,
+    formError,
+    setFormError,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children} </WalletContext.Provider>
+  );
+};
+
+export { WalletContext };
+import React, { useRef, useState } from "react";
+import ModalBody from "../../../../../modals/ModalBody";
+import EwalletStyles from "./eWallet.module.css";
+import CautionModal from "../../../../../modals/caution/CautionModal";
+import TopUpeWallet from "../../../../../modals/topupeWallet/TopUpeWallet";
+import { useModal } from "../../../../../../ModalContext";
+import { ModalProps } from "../../../../../modals/Modal";
+import { IEwallet } from "../../../../../../hooks/useEwallets";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+
+interface EwalletMenuProps extends ModalProps {
+  wallet: IEwallet | undefined;
+  isPreferred: boolean | undefined;
+  permission: string[] | undefined;
+  hasSubscription?: boolean; // Assuming you pass a prop to check if a user has a subscription
+}
+const EwalletMenu: React.FC<EwalletMenuProps> = ({
+  wallet,
+  isPreferred,
+  permission,
+  isOpen,
+  onClose,
+  hasSubscription,
+}) => {
+  const { openAliasModal, openPreferredModal } = useWalletContext();
+  const isAdministrator = permission?.includes("Administrator");
+  const [showCautionModal, setShowCautionModal] = useState(false);
+  const { openTopUpModal, closeTopUpModal, isTopUpOpen } = useModal();
+
+  if (!isOpen) return null;
+
+  const handleAddSubscriptionClick = () => {
+    if (hasSubscription) {
+      setShowCautionModal(true);
+    } else {
+      // Code to add subscription if no current subscription exists
+    }
+  };
+  const handleAliasClick = () => {
+    openAliasModal(wallet!);
+  };
+  const handlePreferredClick = () => {
+    openPreferredModal(wallet!);
+    //OR
+    // if (wallet) {
+    //   openPreferredModal(wallet);
+    // }
+  };
+
+  const closeCautionModal = () => setShowCautionModal(false);
+  return (
+    <>
+      <ModalBody
+        className={EwalletStyles["ewallet-dropdown-content"]}
+        isOpen={isOpen}
+      >
+        <ul onClick={onClose}>
+          {isAdministrator && (
+            <>
+              <li onClick={handleAliasClick}>Edit name</li>
+              <li onClick={handleAddSubscriptionClick}>Add subscription</li>
+              <li onClick={openTopUpModal}>Top-up wallet</li>
+              <li onClick={() => handlePreferredClick()}>
+                {isPreferred ? null : "Set as preferred"}
+              </li>
+            </>
+          )}{" "}
+        </ul>
+      </ModalBody>
+      {showCautionModal && (
+        <CautionModal isOpen={showCautionModal} onClose={closeCautionModal} />
+      )}
+      {isTopUpOpen && (
+        <TopUpeWallet isOpen={isTopUpOpen} onClose={closeTopUpModal} />
+      )}
+    </>
+  );
+};
+
+export default EwalletMenu;
+import React, { useState } from "react";
+import { CiMenuKebab } from "react-icons/ci";
+import EwalletMenu from "./EwalletMenu";
+import styles from "./eWallet.module.css";
+import { IEwallet } from "../../../../../../hooks/useEwallets";
+import EwalletDetails from "./EwalletDetails";
+import { ModalProps } from "../../../../../modals/Modal";
+import ConfirmPreferredAccountModal from "../../../../../modals/updateModals/ConfirmPreferredAccountModal";
+import useGetSubscriptionStatusOnWallet from "../../../../../../hooks/useGetSubscriptionStatusOnWallet";
+import CautionModal from "../../../../../modals/caution/CautionModal";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+import EditEwalletAliasModal from "../../../../../modals/updateModals/EditEwalletAliasModal";
+
+interface EwalletCardProps extends ModalProps {
+  wallet: IEwallet | undefined;
+  isPreferred: boolean | undefined;
+  handleKebabClick: () => void;
+}
+const EwalletCard: React.FC<EwalletCardProps> = ({
+  wallet,
+  isOpen,
+  isPreferred,
+  onClose,
+  handleKebabClick,
+}) => {
+  const { isPreferredModalOpen, isAliasModalOpen } = useWalletContext();
+
+  const [isAddSubscriptionOpen, setAddSubscriptionOpen] = useState(false);
+  const [isCautionModalOpen, setCautionModalOpen] = useState(false);
+
+  const { data: subscription } = useGetSubscriptionStatusOnWallet(wallet?.id);
+
+  const handleAddClick = () => {
+    if (subscription?.activeSubscription === 0) {
+      setAddSubscriptionOpen(true);
+    }
+    setCautionModalOpen(true);
+  };
+  const handleCloseCautionModal = () => {
+    setCautionModalOpen(false);
+  };
+  const cardClass = `${styles["ewallet-card"]} ${
+    isPreferred ? styles.preferred : ""
+  }`;
+
+  return (
+    <div key={wallet?.id} className={cardClass}>
+      <div className={styles["ewallet-card-content"]}>
+        <div className={styles["ewallet-card-header"]}>
+          <h3>{wallet?.isPreferred ? "Primary Wallet" : wallet?.alias}</h3>
+          {wallet?.isPreferred && (
+            <div className={styles["preferred-text"]}>PREFERRED</div>
+          )}
+          <div key={wallet?.id} className={styles["ewallet-dropdown"]}>
+            {/* {(hasAdminPermission && isPreferred) ||
+              (!isPreferred && (
+                <div className={styles.circle}>
+                  <CiMenuKebab
+                    className={styles.kebab}
+                    onClick={() => handleKebabClick(wallet?.id)}
+                  />
+                </div>
+              ))} */}
+            {/* {hasUserPermission && !isPreferred && ( */}
+            <div className={styles.circle}>
+              <CiMenuKebab
+                className={styles.kebab}
+                onClick={handleKebabClick}
+              />
+            </div>
+            {/* )} */}
+            <EwalletMenu
+              isOpen={isOpen}
+              onClose={onClose}
+              wallet={wallet}
+              isPreferred={wallet?.isPreferred}
+              permission={wallet?.permission}
+              //onSetPreferredWallet={handlePreferredClick}
+            />
+          </div>
+        </div>
+        <div className={styles["ewallet-wrap"]}>
+          <h6>WALLET NUMBER</h6>
+          <p className={styles["wallet-number"]}>{wallet?.accountIdentifier}</p>
+        </div>
+        <div className={styles["ewallet-wrap"]}>
+          <h6>BALANCE</h6>
+          <p className={styles.balance}>
+            $
+            {wallet?.amount.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+        </div>
+        <EwalletDetails
+          walletId={wallet?.id}
+          usersOnWallet={wallet?.usersOnWallet}
+        />
+      </div>
+      {isAliasModalOpen && <EditEwalletAliasModal />}
+
+      {isPreferredModalOpen && <ConfirmPreferredAccountModal />}
+      <CautionModal
+        isOpen={isCautionModalOpen}
+        onClose={handleCloseCautionModal}
+      />
+    </div>
+  );
+};
+
+export default EwalletCard;
+import React, { useState } from "react";
+import { ToastContainer } from "react-toastify";
+import EwalletCard from "./EwalletCard";
+import styles from "./eWallet.module.css";
+import EwalletModal from "./EwalletModal";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+
+const Ewallet = () => {
+  const { wallets, isLoading, error } = useWalletContext();
+
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  //The state openMenuIndex keeps track of which ewallet's menu is currently open.
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const [isOwner, setIsOwner] = useState(true);
+
+  const handleRadioButtonChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setIsOwner(event.target.value === "yes");
+  };
+
+  const handleKebabClick = (index: number) => {
+    if (openMenuIndex === index) {
+      setOpenMenuIndex(null); // Close the menu if it is already open
+    } else {
+      setOpenMenuIndex(index); // Open the menu for the clicked card
+    }
+  };
+  const handleCloseMenu = () => {
+    setOpenMenuIndex(null);
+  };
+
+  const handleOpenAddModal = () => {
+    setAddModalOpen(true);
+  };
+  const handleCloseAddModal = () => {
+    setAddModalOpen(false);
+  };
+  const renderEwalletCards = () => {
+    return wallets?.map((ewalletData, index) => (
+      <EwalletCard
+        key={ewalletData.id}
+        isOpen={openMenuIndex === index}
+        onClose={handleCloseMenu}
+        wallet={ewalletData}
+        handleKebabClick={() => handleKebabClick(index)}
+        isPreferred={ewalletData?.isPreferred}
+      />
+    ));
+  };
+
+  if (isLoading) return <p>Loading wallets...</p>;
+  if (error) return <p>Error loading wallets: {error.message}</p>;
+  return (
+    <StandardLayout
+      header="My eWallet"
+      buttonLabel="Add New eWallet"
+      onButtonClick={handleOpenAddModal}
+    >
+      <div className={styles.ewallet}>
+        <ToastContainer />
+        <div className={styles["ewallet-container"]}>
+          {isLoading && (
+            <div className={styles["load-container"]}>
+              <span className="loader"></span>
+            </div>
+          )}
+
+          {!isLoading && (wallets?.length ?? 0) === 0 && (
+            <div className={styles["load-container"]}>
+              <p className={styles["no-applications-message"]}>
+                No wallet available
+              </p>
+            </div>
+          )}
+
+          {renderEwalletCards()}
+        </div>
+
+        <EwalletModal
+          isOpen={isAddModalOpen}
+          onClose={handleCloseAddModal}
+          isOwner={isOwner}
+          handleRadioButtonChange={handleRadioButtonChange}
+        />
+      </div>
+    </StandardLayout>
+  );
+};
+
+export default Ewallet;
