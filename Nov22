@@ -1,0 +1,66 @@
+import React from "react";
+import styles from "./CartPage.module.css";
+
+const CartPage = ({ cartItems, total, onRemoveItem, onDeselectAll, onProceed }) => {
+  return (
+    <div className={styles.cartPage}>
+      {/* Left Section */}
+      <div className={styles.leftSection}>
+        {/* Header */}
+        <div className={styles.cartHeader}>
+          <h2>Cart</h2>
+          <a href="#" onClick={onDeselectAll} className={styles.deselectLink}>
+            Deselect all items
+          </a>
+          <span className={styles.priceHeader}>Price</span>
+        </div>
+        <hr />
+        {/* Cart Items */}
+        {cartItems.map((item, index) => (
+          <div key={index} className={styles.cartItemRow}>
+            {/* Checkbox */}
+            <input type="checkbox" className={styles.checkbox} />
+            {/* Item Details */}
+            <div className={styles.itemDetails}>
+              <div className={styles.itemName}>{item.name}</div>
+              <div className={styles.accountInfo}>
+                {item.accountIdentifier}
+                <button
+                  className={styles.deleteButton}
+                  onClick={() => onRemoveItem(index)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+            {/* Description */}
+            <div className={styles.itemDescription}>
+              Description: {item.description}
+            </div>
+            {/* Price */}
+            <div className={styles.itemPrice}>${item.amount}</div>
+          </div>
+        ))}
+        <hr />
+        {/* Subtotal */}
+        <div className={styles.subtotal}>
+          Subtotal ({cartItems.length} items): ${total}
+        </div>
+      </div>
+
+      {/* Right Section */}
+      <div className={styles.rightSection}>
+        <div className={styles.summary}>
+          <div>
+            Subtotal ({cartItems.length} items): ${total}
+          </div>
+          <button className={styles.checkoutButton} onClick={onProceed}>
+            Proceed to checkout
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CartPage;
