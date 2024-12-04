@@ -31,14 +31,14 @@ const Profile = () => {
   } = useFetchProfileDetails();
   const { data: parishes } = useParishes();
   const [parishCode, setParishCode] = useState("");
-  const { data: postOffices } = usePostOffices(parishCode);
+  const { data: postOffices, refetch: refetchPostOffices } =
+    usePostOffices(parishCode);
   const { mutate: updateProfileDetails, isLoading: isUpdating } =
     useUpdateProfile();
   const [formError, setFormError] = useState<string | undefined>(undefined);
 
   const methods = useForm<ProfileDetails>({ defaultValues: profile });
   const {
-    control,
     register,
     handleSubmit,
     watch,
@@ -47,33 +47,18 @@ const Profile = () => {
     formState: { errors, isDirty },
   } = methods;
 
-  // Watch changes to the parish field to update parish code
   const selectedParishName = watch("parish");
   const selectedPostOfficeName = watch("postOffice");
   const selectedCountryName = watch("country");
 
-  const { data: countries, isLoading: isCountriesLoading } =
-    useFetchCountries(selectedCountryName);
-  useEffect(() => {
-    if (profile) {
-      reset(profile); // Reset the form with the fetched profile data.
-    }
-  }, [profile, reset]);
+  const { data: countries } = useFetchCountries(selectedCountryName);
 
   useEffect(() => {
-    if (profile && parishes?.length) {
-      const initialParish = parishes.find(
-        (p) => p.code === profile.parishCodeStr
-      );
-      if (initialParish) {
-        reset({
-          ...profile,
-          parish: initialParish.name,
-          parishCodeStr: initialParish.code,
-        });
-      }
+    if (profile) {
+      reset(profile); // Reset form with the latest profile data
+      setParishCode(profile.parishCodeStr || "");
     }
-  }, [profile, parishes, reset]);
+  }, [profile, reset]);
 
   useEffect(() => {
     if (parishes && selectedParishName) {
@@ -81,21 +66,59 @@ const Profile = () => {
       if (foundParish) {
         setValue("parishCodeStr", foundParish.code);
         setParishCode(foundParish.code);
+
+        //setValue("postOffice", "");
       }
     }
   }, [selectedParishName, parishes, setValue]);
 
+  // Refetch post offices when parishCode Changes
   useEffect(() => {
-    if (postOffices && selectedPostOfficeName) {
-      const foundPostOffice = postOffices.find(
-        (p) => p.name === selectedPostOfficeName
-      );
-      if (foundPostOffice) {
-        setValue("postalCodeStr", String(foundPostOffice.id));
-        setValue("postOffice", foundPostOffice.name);
-      }
+    if (parishCode) {
+      refetchPostOffices();
     }
-  }, [selectedPostOfficeName, postOffices, setValue]);
+  }, [parishCode, refetchPostOffices]);
+
+  const isFieldDirty = <T extends keyof ProfileDetails>(
+    fieldName: T,
+    currentValue: ProfileDetails[T]
+  ): boolean => {
+    return profile ? profile[fieldName] !== currentValue : false;
+  };
+
+  const isFormDirty =
+    isDirty ||
+    isFieldDirty("parish", selectedParishName) ||
+    isFieldDirty("postOffice", selectedPostOfficeName) ||
+    isFieldDirty("country", selectedCountryName);
+
+  // useEffect(() => {
+  //   if (profile && parishes?.length) {
+  //     const initialParish = parishes.find(
+  //       (p) => p.code === profile.parishCodeStr
+  //     );
+  //     if (initialParish) {
+  //       reset({
+  //         ...profile,
+  //         parish: initialParish.name,
+  //         parishCodeStr: initialParish.code,
+  //       });
+  //       setParishCode(initialParish.code);
+  //     }
+  //   }
+  // }, [profile, parishes, reset]);
+
+  // useEffect(() => {
+  //   if (postOffices && selectedPostOfficeName) {
+  //     const foundPostOffice = postOffices.find(
+  //       (p) => p.name === selectedPostOfficeName
+  //     );
+  //     if (foundPostOffice) {
+  //       setValue("postalCodeStr", String(foundPostOffice.id));
+  //       setValue("postOffice", foundPostOffice.name);
+  //     }
+  //   }
+  // }, [selectedPostOfficeName, postOffices, setValue]);
 
   useEffect(() => {
     if (countries && selectedCountryName) {
@@ -138,12 +161,13 @@ const Profile = () => {
         { profileDetails: data, subscriberId: profile.subscriberId },
         {
           onSuccess: () => {
-            handleCloseModal();
+            reset(data); // Reset form with submitted data
+            setParishCode(data.parishCodeStr || ""); // Ensure parish code is updated
+            // handleCloseModal();
             toast.success("Profile Details updated successfully!");
           },
           onError: (error: any) => {
             setFormError(error.message);
-
             toast.error(`Failed to update profile details - ${error}`);
           },
         }
@@ -185,6 +209,11 @@ const Profile = () => {
   //     console.log("Error updating profile details", error);
   //   }
   // };
+  useEffect(() => {
+    console.log("Selected Parish", selectedParishName);
+    console.log("Selected Post Office:", selectedPostOfficeName);
+    console.log("Is Form Dirty:", isFormDirty);
+  }, [selectedParishName, selectedPostOfficeName, isFormDirty]);
 
   if (isProfileLoading) return <Loader />;
   if (profileError) return <div>Error loading data</div>;
@@ -202,7 +231,7 @@ const Profile = () => {
               onClick={() => {
                 console.log("Save Button clicked");
               }}
-              disabled={!isDirty || isUpdating}
+              disabled={!isFormDirty || isUpdating}
             >
               {isUpdating ? "Saving..." : "Save Changes"}
             </SolidButton>
@@ -558,255 +587,3 @@ const Profile = () => {
 };
 
 export default Profile;
-
-.titles {
-  font-family: Roboto;
-  font-size: 22px;
-  font-weight: 500;
-  text-align: left;
-  color: #232222;
-  margin-left: 1rem;
-}
-
-.profile-container {
-  height: 838px;
-  /* height: 938px; if profile pic is activated*/
-  padding: 1rem;
-}
-
-/* .input-column label {
-  font-family: Roboto;
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 19px;
-  letter-spacing: 0em;
-  text-align: left;
-  color: #5c5c5c;
-  margin-top: 10px;
-} */
-/* .input-column :is(input, select) {
-  width: 100%;
-  height: 40px;
-  /* border-radius: 4px; 
-  border: 1px solid #e5e5e5;
-  /* color: #c4c4c4; 
-  color: #1d3083;
-  /* background-color: aqua; 
-  font-family: Roboto;
-  font-size: 16px;
-  font-weight: 300;
-  line-height: 21px;
-  letter-spacing: 0em;
-  text-align: left;
-  padding: 0.5rem;
-  margin-top: 10px;
-  text-transform: uppercase;
-}
-
-.input-column :is(select, input)::placeholder {
-  color: #C4C4C4;
-  text-transform: capitalize;
-} */
-
-/* .input-column select {
-  width: 310px;
-  height: 40px;
-  border-radius: 4px;
-  border: 1px solid #e5e5e5;
-  padding-left: 1rem;
-  margin-top: 10px;
-  font-family: Roboto;
-  font-size: 18px;
-  font-weight: 300;
-} */
-/* .profile-container input {
-  width: 456px;
-  height: 40px;
-  border-radius: 4px;
-  border: 1px solid #e5e5e5;
-  background: linear-gradient(0deg, #e5e5e5, #e5e5e5),
-    linear-gradient(0deg, #ffffff, #ffffff);
-  margin-bottom: 15px;
-  font-family: Roboto;
-  font-size: 18px;
-  font-weight: 300;
-  line-height: 25px;
-  letter-spacing: 0em;
-  text-align: left;
-  padding: 19px;
-} 
-.profile-container button {
-  font-family: Roboto;
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 21px;
-  letter-spacing: 0em;
-  text-align: center;
-  width: 178px;
-  height: 40px;
-  background: #5c5c5c;
-  color: #ffffff;
-  border: none;
-  position: absolute;
-  left: 33px;
-  top: 360px;
-  cursor: pointer;
-}*/
-
-.profile-info {
-  display: none; /*should be flex*/
-  align-items: center;
-  justify-content: space-between;
-  /* background-color: yellowgreen; */
-  padding: 1rem;
-}
-
-.profile-info h5 {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 21px;
-  letter-spacing: 0em;
-  text-align: left;
-  color: #a7a7a7;
-}
-.profile-icon {
-  width: 77px;
-  height: 83.75px;
-  color: #1d3083;
-  margin-right: 1rem;
-}
-
-.saveBtn {
-  width: 132px;
-  height: 32px;
-  top: 424px;
-  left: 1351px;
-  border-radius: 6px;
-  border: none;
-  font-family: Roboto;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 19px;
-  letter-spacing: 0em;
-  text-align: center;
-  color: #ffffff;
-  background: #274ad1;
-  margin-top: 6rem;
-  margin-left: 2rem;
-}
-.saveBtn:hover {
-  cursor: pointer;
-  opacity: 0.8;
-}
-.saveBtn:disabled {
-  background-color: #ccc;
-
-  /* opacity: 0.5; */
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.removeBtn {
-  width: 132px;
-  height: 32px;
-  top: 424px;
-  left: 1489px;
-  border-radius: 6px;
-  border: 1px;
-  border: 1px solid #274ad1;
-  font-family: Roboto;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 19px;
-  letter-spacing: 0em;
-  text-align: center;
-  color: #274ad1;
-  background-color: #ffffff;
-}
-
-.formGrid,
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 100px 100px 40px;
-  grid-gap: 20px;
-  margin-top: 20px;
-  margin-left: 25px;
-}
-
-/* .input-column {
-  display: flex;
-  flex-direction: column;
-} */
-
-.input-inline {
-  display: flex;
-}
-.input-inline input {
-  margin-right: 10px; /* Adjust the margin as needed */
-}
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 500px;
-  width: 100%;
-  padding: 0.5rem;
-  background-color: #ffffff;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  /* padding: 0.5rem; */
-  box-shadow: 0px 4px 4px 0px #00000040;
-}
-
-/* .saveBtn {
-  width: 132px;
-  height: 32px;
-  border-radius: 6px;
-  background: #1d3083;
-  font-family: Roboto;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 19px;
-  letter-spacing: 0em;
-  text-align: center;
-  color: #ffffff;
-  border: none;
-  display: block;
-  margin-top: 70px;
-  cursor: pointer;
-} */
-
-.delete-container {
-  width: 780px;
-  height: 72px;
-  border-radius: 6px;
-  border: 1px solid #e9e5e5;
-  padding: 2rem;
-  margin-top: 50px;
-  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-  display: flex;
-  align-items: center;
-}
-.delete-container p {
-  font-family: Roboto;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 19px;
-  letter-spacing: 0em;
-  text-align: left;
-}
-
-.delete-btn {
-  width: 22px;
-  height: 23px;
-  color: #1d3083;
-  margin-right: 10px;
-  /* cursor: pointer; */
-}
-
-.delete-container p > a {
-  color: #1d3083;
-  cursor: pointer;
-}
