@@ -1,0 +1,390 @@
+performWalletAction
+interface WalletContextType {
+  wallets: IEwallet[] | undefined;
+  isLoading: boolean;
+  error: any;
+  selectedWallet: IEwallet | undefined;
+  cartItems: number;
+  cartTotal: number;
+  isPreferredModalOpen: boolean;
+  isAliasModalOpen: boolean;
+  isAddSubscriptionModalOpen: boolean;
+  isCautionModalOpen: boolean;
+  isAddToCartModalOpen: boolean;
+  isTopUpModalOpen: boolean;
+  openMenuIndex: number | null;
+  toggleMenu: (index: number | null) => void;
+  closeMenu: () => void;
+  incrementCart: (amount: number) => void;
+  // openAddSubscriptionModal: () => void;
+  // addWallet: (wallet: IEwallet) => void;
+  closeAddToCart: () => void;
+  closeCautionModal: () => void;
+  closeAddSubscriptionModalOpen: () => void;
+  setAddSubscriptionModalOpen: (set: boolean) => void;
+  setAddToCartModalOpen: (set: boolean) => void;
+  setSelectedWallet: (wallet: IEwallet | undefined) => void;
+  performWalletAction: (action: CartItem) => void;
+  openPreferredModal: (wallet: IEwallet | undefined) => void;
+  setPreferredWallet: (preferredAccount: string | undefined) => void;
+  openAliasModal: (wallet: IEwallet | undefined) => void;
+  openTopUpModal: () => void;
+  closeModals: () => void;
+  updateAlias: (alias: IEwallet & { ewalletId: number | undefined }) => void;
+  refetchWallets: () => void;
+  handleAddSubscriptionClick: () => void;
+  updateAliasLoading: boolean;
+  updateAliasError: any;
+  setPreferredAccountLoading: boolean;
+  formError: string | null;
+  setFormError: (formError: string | null) => void;
+}
+
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
+
+export const useWalletContext = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error(
+      "useWalletContext must be used within a WalletContextProvider"
+    );
+  }
+  return context;
+};
+
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const queryClient = useQueryClient();
+  const [selectedWallet, setSelectedWallet] = useState<IEwallet | undefined>(
+    undefined
+  );
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
+  const [activeSubscription, setActiveSubscription] = useState<number | null>(
+    null
+  );
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [cartItems, setCartItems] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
+
+  const [isAddToCartModalOpen, setAddToCartModalOpen] = useState(false);
+
+  const [isAddSubscriptionModalOpen, setAddSubscriptionModalOpen] =
+    useState(false);
+  const [isTopUpModalOpen, setTopUpModalOpen] = useState(false);
+  const [isAliasModalOpen, setAliasModalOpen] = useState(false);
+  const [isPreferredModalOpen, setPreferredModalOpen] = useState(false);
+  const [isCautionModalOpen, setCautionModalOpen] = useState(false);
+
+  const page = 1;
+  const pageSize = 10;
+
+  const { authState } = useContext(AuthContext);
+
+  //  Fetch wallets
+  const {
+    data: wallets,
+    isLoading,
+    error,
+    refetch,
+  } = useGetEwallets(authState.subscriberId, page, pageSize);
+
+  const cartContext = useCartContext();
+  const performWalletAction = (action: CartItem) => {
+    console.log("Perfoming wallett action:", action);
+    cartContext.addItem(action); // Calls CartContext's addItem
+  };
+  const toggleMenu = (index: number | null) => {
+    setOpenMenuIndex((prev) => (prev === index ? null : index));
+  };
+
+  const closeMenu = () => {
+    setOpenMenuIndex(null);
+  };
+
+  const closeAddSubscriptionModalOpen = () => {
+    setAddSubscriptionModalOpen(false);
+  };
+
+  const closeCautionModal = () => {
+    setCautionModalOpen(false);
+  };
+
+  const closeAddToCart = () => {
+    setAddToCartModalOpen(false);
+  };
+  const fetchActiveSubscription = async (walletId: number | undefined) => {
+    try {
+      const response = await axios.get(
+        `${variables.SUBSCRIPTION_STATUS}${walletId}`
+      );
+      setActiveSubscription(response.data.activeSubscription);
+      return response.data.activeSubscription;
+    } catch (error) {
+      console.error("Failed to fetch subscription status", error);
+      setActiveSubscription(null);
+    }
+  };
+
+  const handleAddSubscriptionClick = async () => {
+    console.log(selectedWallet);
+
+    if (selectedWallet) {
+      const subscription = await fetchActiveSubscription(selectedWallet.id);
+      if (subscription > 0) {
+        console.log("has subscription");
+        setCautionModalOpen(true); // Display caution modal
+      } else {
+        setAddSubscriptionModalOpen(true); // Proceed to add subscription
+        console.log("does not have subscription");
+      }
+    }
+  };
+  const openPreferredModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setPreferredModalOpen(true);
+  };
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setPreferredModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = "An error occurred";
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount);
+  };
+  const openTopUpModal = () => {
+    setTopUpModalOpen(true);
+  };
+  const openAliasModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setAliasModalOpen(true);
+  };
+
+  //  Mutation to update alias
+  const updateAliasMutation = useMutation(
+    async (alias: IEwallet): Promise<IEwallet> => {
+      const response = await axios.post<IEwallet>(
+        `${variables.UPDATE_ALIAS}${selectedWallet?.id}`,
+        alias
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        closeModals();
+        toast.success("Ewallet Name updated successfully!", {
+          autoClose: 3000,
+        });
+      },
+      onError: (error: any) => {
+        let errorMessage = "An error occurred";
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.walletId) {
+            errorMessage = backendError.errors.walletId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+
+  const updateAlias = (data: IEwallet & { ewalletId: number | undefined }) => {
+    updateAliasMutation.mutate(data);
+  };
+
+  const incrementCart = (amount: number) => {
+    setCartItems((prev) => prev + 1);
+    setCartTotal((prev) => prev + amount);
+  };
+
+  const closeModals = () => {
+    setPreferredModalOpen(false);
+    setAliasModalOpen(false);
+    setSelectedWallet(undefined);
+    setFormError(null);
+    setAddSubscriptionModalOpen(false);
+    setCautionModalOpen(false);
+    setAddSubscriptionModalOpen(false);
+    setAddToCartModalOpen(false);
+    setTopUpModalOpen(false);
+  };
+
+  const value = {
+    wallets,
+    isLoading,
+    error,
+    openMenuIndex,
+    selectedWallet,
+    cartItems,
+    cartTotal,
+    isPreferredModalOpen,
+    isAliasModalOpen,
+    isAddSubscriptionModalOpen,
+    isCautionModalOpen,
+    isAddToCartModalOpen,
+    isTopUpModalOpen,
+    toggleMenu,
+    closeMenu,
+    closeAddToCart,
+    closeAddSubscriptionModalOpen,
+    closeCautionModal,
+    incrementCart,
+    setSelectedWallet,
+    performWalletAction,
+    openPreferredModal,
+    setAddToCartModalOpen,
+    setAddSubscriptionModalOpen,
+    setPreferredWallet,
+    openTopUpModal,
+    openAliasModal,
+    closeModals,
+    updateAlias,
+    //addWallet,
+    refetchWallets: refetch,
+    handleAddSubscriptionClick,
+    updateAliasLoading: updateAliasMutation.isLoading,
+    updateAliasError: updateAliasMutation.error,
+    setPreferredAccountLoading: setPreferredWalletMutation.isLoading,
+    formError,
+    setFormError,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children} </WalletContext.Provider>
+  );
+};
+
+export { WalletContext };
+
+interface TopUpFormData {
+  amount: number;
+}
+
+const TopUpeWallet: React.FC<ModalProps> = ({ isOpen }) => {
+  const {
+    selectedWallet,
+    isAddToCartModalOpen,
+    incrementCart,
+    setAddToCartModalOpen,
+    closeModals,
+    performWalletAction,
+  } = useWalletContext();
+
+  const methods = useForm<TopUpFormData>();
+  const {
+    register,
+    handleSubmit,
+    reset, // Used to reset the form with new default values
+    formState: { errors, isDirty },
+  } = methods;
+
+  const handleCancelClick = () => {
+    closeModals();
+    reset();
+  };
+  const onSubmit: SubmitHandler<TopUpFormData> = (data) => {
+    console.log(selectedWallet);
+    if (selectedWallet) {
+      performWalletAction({
+        name: "Document",
+        accountIdentifier: selectedWallet.accountIdentifier,
+        amount: data.amount,
+        description: "Wallet TopUp",
+      });
+      reset();
+      closeModals();
+      incrementCart(data.amount);
+      setAddToCartModalOpen(true);
+    } else {
+      console.log("No wallet selected");
+    }
+  };
+  // if (!isTopUpOpen) return null;
+  return (
+    <div>
+      {" "}
+      <Modal className={styles.modal} isOpen={isOpen}>
+        <ModalHeader title="Top Up eWallet" onClose={handleCancelClick} />
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)} className="profile-form">
+            <ModalBody className={styles.modalBody}>
+              <div className={styles["input-column"]}>
+                <FormLabel id="amount" label="Please enter top up amount." />
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="Amount"
+                  {...register("amount", {
+                    required: true,
+                    valueAsNumber: true,
+                    min: 1000,
+                    max: 20000,
+                  })}
+                />
+                {errors.amount?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The Amount field is required
+                  </p>
+                )}
+
+                {errors.amount?.type === "min" && (
+                  <p className={FormStyles.errors}>Must be atleast $1000.</p>
+                )}
+                {errors.amount?.type === "max" && (
+                  <p className={FormStyles.errors}>
+                    Must not exceed 20000 characters
+                  </p>
+                )}
+              </div>
+            </ModalBody>
+            <ModalFooter className={styles["modal-footer"]}>
+              <OutLinedButton
+                className={styles.outlined}
+                onClick={handleCancelClick}
+              >
+                Cancel
+              </OutLinedButton>
+              <SolidButton type="submit" className={styles.solidBtn}>
+                Confirm
+              </SolidButton>
+            </ModalFooter>
+          </form>
+        </FormProvider>
+      </Modal>{" "}
+      {isAddToCartModalOpen && <AddtoCartModal />}
+    </div>
+  );
+};
+
+export default TopUpeWallet;
