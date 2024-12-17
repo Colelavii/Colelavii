@@ -1,0 +1,684 @@
+// EwalletModal.js
+import React, { useContext, useState } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import ModalFooter from "../../../../../modals/ModalFooter";
+import OutLinedButton from "../../../../../buttons/OutLinedButton";
+import SolidButton from "../../../../../buttons/SolidButton";
+import Modal from "../../../../../modals/Modal";
+import ModalHeader from "../../../../../modals/ModalHeader";
+import ModalBody from "../../../../../modals/ModalBody";
+import styles from "./eWallet.module.css";
+import FormStyles from "../../../../../FormFields.module.css";
+import ModalStyles from "../../../../../modals/Modal.module.css";
+import FormLabel from "../../../../../label/FormLabel";
+import { Input } from "../../../../../textfield/Input";
+import { RadioButton } from "../../../../../radiobutton/RadioButton";
+import NonOwnerForm from "./NonOwnerForm";
+import OwnerForm from "./OwnerForm";
+import { toast } from "react-toastify";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+
+export interface IFormData {
+  alias: string;
+  email: string;
+  username: string;
+}
+interface AddEwalletModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  // onSubmit: (data: any) => void;
+  isOwner: boolean;
+  handleRadioButtonChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const AddEwalletModal: React.FC<AddEwalletModalProps> = ({
+  isOpen,
+  onClose,
+  // onSubmit,
+  isOwner,
+  handleRadioButtonChange,
+}) => {
+  const { addWallet } = useWalletContext();
+  const [walletName, setWalletName] = useState("");
+  const authContext = useContext(AuthContext);
+
+  if (!authContext) {
+    throw new Error("EservicePortal must be within an AuthProvider");
+  }
+
+  const { authState } = authContext;
+  const methods = useForm<IFormData>(); // Use generics to specify form fields type
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset, // Used to reset the form with new default values
+    formState: { errors, dirtyFields, isDirty },
+  } = methods;
+
+  const modalBodyStyle = {
+    height: isOwner ? "160px" : "380px", // Adjust the heights based on your needs
+    transition: "height 0.35s ease", // Add a transition for a smooth height change
+    padding: "1.5rem",
+  };
+
+  const handleSubmitt = (data: any) => {
+    // if (walletName.trim() === "") {
+    //   alert("Please enter a valid wallet name");
+    //   return;
+    // }
+    addWallet({
+      alias: data.alias,
+      amount: 0,
+      id: 1,
+      accountIdentifier: "e3-h5",
+      isPreferred: false,
+      accountStatus: "Active",
+      permission: [""],
+      usersOnWallet: 2,
+    });
+    console.log(data);
+
+    //setWalletName("");
+    onClose();
+  };
+  const handleFormSubmit = (data: any) => {
+    (event: React.SyntheticEvent) => {
+      event.preventDefault();
+      // addAddress.mutate();
+    };
+    //onSubmit(data); // Pass the form data up to the parent component or handle it directly
+    console.log(data);
+    toast.success("Yes goodie");
+    reset(); // Reset form fields after submission
+  };
+
+  if (!isOpen) return null; // Only render the modal if it's open
+
+  return (
+    <Modal
+      className={`${ModalStyles.modal} ${styles["modal-ewallet"]}`}
+      isOpen={isOpen}
+      onClose={onClose}
+    >
+      <ModalHeader title="Add eWallet" onClose={onClose} />
+      <FormProvider {...methods}>
+        <form onSubmit={handleSubmit(handleSubmitt)}>
+          <hr className="solid" />
+          <ModalBody className={styles["modal-body"]}>
+            <div style={modalBodyStyle}>
+              <div className={FormStyles["radioBtn-row"]}>
+                <h3>Will you be the owner of the wallet?</h3>
+
+                <>
+                  <RadioButton
+                    // type="radio"
+                    id="no"
+                    name="ownerRadio"
+                    value="no"
+                    checked={!isOwner}
+                    onChange={handleRadioButtonChange}
+                    label="No"
+                  />
+                  {/* <FormLabel id="no" label="No" /> */}
+                </>
+                <>
+                  <RadioButton
+                    //type="radio"
+                    id="yes"
+                    name="ownerRadio"
+                    value="yes"
+                    checked={isOwner}
+                    onChange={handleRadioButtonChange}
+                    label="Yes"
+                  />
+                  {/* <FormLabel id="yes" label="Yes" /> */}
+                </>
+              </div>
+
+              {!isOwner ? <NonOwnerForm /> : <OwnerForm />}
+            </div>{" "}
+          </ModalBody>
+          {/* END OF MODAL-BODY */}
+          <ModalFooter className={styles["modal-footer"]}>
+            <OutLinedButton
+              type="button"
+              className={styles["modal-cancel"]}
+              onClick={onClose}
+            >
+              Cancel
+            </OutLinedButton>
+            <SolidButton
+              type="submit"
+              className={styles["modal-submit"]}
+              disabled={!isDirty}
+            >
+              Add eWallet
+            </SolidButton>
+          </ModalFooter>
+        </form>
+      </FormProvider>
+    </Modal>
+  );
+};
+
+export default AddEwalletModal;
+import React from "react";
+import { useForm, useFormContext } from "react-hook-form";
+import FormStyles from "../../../../../FormFields.module.css";
+import FormLabel from "../../../../../label/FormLabel";
+import { Input } from "../../../../../textfield/Input";
+import { IFormData } from "./EwalletModal";
+
+const NonOwnerForm: React.FC = () => {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext();
+
+  return (
+    <>
+      <div className={FormStyles["input-column"]}>
+        <FormLabel id="email" label="Owner Email Address" />
+        <Input
+          id="email"
+          {...register("email", {
+            required: true,
+            minLength: 10,
+            maxLength: 45,
+          })}
+          type="email"
+          placeholder="Email Address"
+        />
+        {errors.email?.type === "required" && (
+          <p className={FormStyles.errors}>
+            The Email Address field is required
+          </p>
+        )}
+        {errors.email?.type === "minLength" && (
+          <p className={FormStyles.errors}>Must be at least 10 characters</p>
+        )}
+        {errors.email?.type === "maxLength" && (
+          <p className={FormStyles.errors}>Must not exceed 45 characters</p>
+        )}
+      </div>
+      <div className={FormStyles["input-column"]}>
+        <FormLabel id="username" label="Owner User Name" />
+        <Input
+          id="username"
+          {...register("username", {
+            required: true,
+            minLength: 2,
+            maxLength: 25,
+          })}
+          type="text"
+          placeholder="UserName"
+        />
+        {errors.username?.type === "required" && (
+          <p className={FormStyles.errors}>The UserName field is required</p>
+        )}
+        {errors.username?.type === "minLength" && (
+          <p className={FormStyles.errors}>Must be at least 2 characters</p>
+        )}
+        {errors.username?.type === "maxLength" && (
+          <p className={FormStyles.errors}>Must not exceed 25 characters</p>
+        )}
+      </div>
+      <div className={FormStyles["input-column"]}>
+        <FormLabel id="alias" label="eWallet Name" />
+        <Input
+          id="alias"
+          {...register("alias", {
+            required: true,
+            minLength: 2,
+            maxLength: 25,
+          })}
+          type="text"
+          placeholder="eWallet Nickname"
+        />
+        {errors.alias?.type === "required" && (
+          <p className={FormStyles.errors}>
+            The eWallet Name field is required
+          </p>
+        )}
+        {errors.alias?.type === "minLength" && (
+          <p className={FormStyles.errors}>Must be at least 2 characters</p>
+        )}
+        {errors.alias?.type === "maxLength" && (
+          <p className={FormStyles.errors}>Must not exceed 25 characters</p>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default NonOwnerForm;
+import React from "react";
+import { useForm, useFormContext } from "react-hook-form";
+import FormStyles from "../../../../../FormFields.module.css";
+import FormLabel from "../../../../../label/FormLabel";
+import { Input } from "../../../../../textfield/Input";
+
+const OwnerForm: React.FC = () => {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext();
+
+  return (
+    <div className={FormStyles["input-column"]}>
+      <FormLabel id="alias" label="eWallet Name" />
+      <Input
+        id="alias"
+        type="text"
+        placeholder="eWallet Nickname"
+        {...register("alias", {
+          required: true,
+          minLength: 2,
+          maxLength: 25,
+        })}
+      />
+      {errors.alias?.type === "required" && (
+        <p className={FormStyles.errors}>The eWallet Name field is required</p>
+      )}
+      {errors.alias?.type === "minLength" && (
+        <p className={FormStyles.errors}>Must be at least 2 characters</p>
+      )}
+      {errors.alias?.type === "maxLength" && (
+        <p className={FormStyles.errors}>Must not exceed 25 characters</p>
+      )}
+    </div>
+  );
+};
+
+export default OwnerForm;
+import React, { useState } from "react";
+import { ToastContainer } from "react-toastify";
+import EwalletCard from "./EwalletCard";
+import styles from "./eWallet.module.css";
+import EwalletModal from "./EwalletModal";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+
+const Ewallet = () => {
+  const { wallets, isLoading, error, openMenuIndex, toggleMenu, closeMenu } =
+    useWalletContext();
+
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(true);
+
+  const handleRadioButtonChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setIsOwner(event.target.value === "yes");
+  };
+
+  const handleOpenAddModal = () => setAddModalOpen(true);
+
+  const handleCloseAddModal = () => setAddModalOpen(false);
+
+  const renderEwalletCards = () => {
+    return wallets?.map((ewalletData, index) => (
+      <EwalletCard
+        key={ewalletData.id}
+        isOpen={openMenuIndex === index}
+        onToggleMenu={() => toggleMenu(index)}
+        onClose={closeMenu}
+        wallet={ewalletData}
+        isPreferred={ewalletData?.isPreferred}
+      />
+    ));
+  };
+
+  if (isLoading) return <p>Loading wallets...</p>;
+  if (error) return <p>Error loading wallets: {error.message}</p>;
+  return (
+    <StandardLayout
+      header="My eWallet"
+      buttonLabel="Add New eWallet"
+      onButtonClick={handleOpenAddModal}
+    >
+      <ToastContainer />
+      <div className={styles["ewallet-container"]}>
+        {isLoading && (
+          <div className={styles["load-container"]}>
+            <span className="loader"></span>
+          </div>
+        )}
+
+        {!isLoading && (wallets?.length ?? 0) === 0 && (
+          <div className={styles["load-container"]}>
+            <p className={styles["no-applications-message"]}>
+              No wallet available
+            </p>
+          </div>
+        )}
+
+        {renderEwalletCards()}
+        <div>
+          {wallets?.map((wallet) => (
+            <div key={wallet.id}>
+              <h3>{wallet.alias}</h3>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {isAddModalOpen && (
+        <EwalletModal
+          isOpen={isAddModalOpen}
+          onClose={handleCloseAddModal}
+          isOwner={isOwner}
+          handleRadioButtonChange={handleRadioButtonChange}
+        />
+      )}
+    </StandardLayout>
+  );
+};
+
+export default Ewallet;
+import { createContext, ReactNode, useContext, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { IEwallet, useGetEwallets } from "../../hooks/useEwallets";
+import AuthContext from "./authContext";
+import axios from "axios";
+import { CACHE_KEY_EWALLETS, variables } from "../../Variables";
+import { toast } from "react-toastify";
+import { CartItem, useCartContext } from "./cartContext";
+
+interface WalletContextType {
+  wallets: IEwallet[] | undefined;
+  isLoading: boolean;
+  error: any;
+  selectedWallet: IEwallet | undefined;
+  // cartItems: number;
+  // cartTotal: number;
+  isPreferredModalOpen: boolean;
+  isAliasModalOpen: boolean;
+  isAddSubscriptionModalOpen: boolean;
+  isCautionModalOpen: boolean;
+  isAddToCartModalOpen: boolean;
+  isTopUpModalOpen: boolean;
+  openMenuIndex: number | null;
+  toggleMenu: (index: number | null) => void;
+  closeMenu: () => void;
+  // incrementCart: (amount: number) => void;
+  // openAddSubscriptionModal: () => void;
+  addWallet: (wallet: IEwallet) => void;
+  closeAddToCart: () => void;
+  closeCautionModal: () => void;
+  closeAddSubscriptionModalOpen: () => void;
+  setAddSubscriptionModalOpen: (set: boolean) => void;
+  setAddToCartModalOpen: (set: boolean) => void;
+  setSelectedWallet: (wallet: IEwallet | undefined) => void;
+  performWalletAction: (action: Omit<CartItem, "id">) => void;
+  openPreferredModal: (wallet: IEwallet | undefined) => void;
+  setPreferredWallet: (preferredAccount: string | undefined) => void;
+  openAliasModal: (wallet: IEwallet | undefined) => void;
+  openTopUpModal: () => void;
+  closeModals: () => void;
+  updateAlias: (alias: IEwallet & { ewalletId: number | undefined }) => void;
+  refetchWallets: () => void;
+  handleAddSubscriptionClick: () => void;
+  updateAliasLoading: boolean;
+  updateAliasError: any;
+  setPreferredAccountLoading: boolean;
+  formError: string | null;
+  setFormError: (formError: string | null) => void;
+}
+
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
+
+export const useWalletContext = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error(
+      "useWalletContext must be used within a WalletContextProvider"
+    );
+  }
+  return context;
+};
+
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const queryClient = useQueryClient();
+  const [wallet, setWallet] = useState<IEwallet[]>([]);
+  const [selectedWallet, setSelectedWallet] = useState<IEwallet | undefined>(
+    undefined
+  );
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
+  const [activeSubscription, setActiveSubscription] = useState<number | null>(
+    null
+  );
+
+  const [formError, setFormError] = useState<string | null>(null);
+  // const [cartItems, setCartItems] = useState(0);
+  // const [cartTotal, setCartTotal] = useState(0);
+
+  const [isAddToCartModalOpen, setAddToCartModalOpen] = useState(false);
+
+  const [isAddSubscriptionModalOpen, setAddSubscriptionModalOpen] =
+    useState(false);
+  const [isTopUpModalOpen, setTopUpModalOpen] = useState(false);
+  const [isAliasModalOpen, setAliasModalOpen] = useState(false);
+  const [isPreferredModalOpen, setPreferredModalOpen] = useState(false);
+  const [isCautionModalOpen, setCautionModalOpen] = useState(false);
+
+  const page = 1;
+  const pageSize = 10;
+
+  const { authState } = useContext(AuthContext);
+
+  //  Fetch wallets
+  const {
+    data: wallets,
+    isLoading,
+    error,
+    refetch,
+  } = useGetEwallets(authState.subscriberId, page, pageSize);
+
+  const cartContext = useCartContext();
+  const performWalletAction = (action: Omit<CartItem, "id">) => {
+    console.log("Perfoming wallet action:", action);
+    cartContext.addItem(action); // Calls CartContext's addItem
+  };
+  const addWallet = (wallett: IEwallet) => {
+    setWallet([...wallet, wallett]);
+  };
+  const toggleMenu = (index: number | null) => {
+    setOpenMenuIndex((prev) => (prev === index ? null : index));
+  };
+
+  const closeMenu = () => {
+    setOpenMenuIndex(null);
+  };
+
+  const closeAddSubscriptionModalOpen = () => {
+    setAddSubscriptionModalOpen(false);
+  };
+
+  const closeCautionModal = () => {
+    setCautionModalOpen(false);
+  };
+
+  const closeAddToCart = () => {
+    setAddToCartModalOpen(false);
+  };
+  const fetchActiveSubscription = async (walletId: number | undefined) => {
+    try {
+      const response = await axios.get(
+        `${variables.SUBSCRIPTION_STATUS}${walletId}`
+      );
+      setActiveSubscription(response.data.activeSubscription);
+      return response.data.activeSubscription;
+    } catch (error) {
+      console.error("Failed to fetch subscription status", error);
+      setActiveSubscription(null);
+    }
+  };
+
+  const handleAddSubscriptionClick = async () => {
+    console.log(selectedWallet);
+
+    if (selectedWallet) {
+      const subscription = await fetchActiveSubscription(selectedWallet.id);
+      if (subscription > 0) {
+        console.log("has subscription");
+        setCautionModalOpen(true); // Display caution modal
+      } else {
+        setAddSubscriptionModalOpen(true); // Proceed to add subscription
+        console.log("does not have subscription");
+      }
+    }
+  };
+  const openPreferredModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setPreferredModalOpen(true);
+  };
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setPreferredModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = "An error occurred";
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount);
+  };
+  const openTopUpModal = () => {
+    setTopUpModalOpen(true);
+  };
+  const openAliasModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setAliasModalOpen(true);
+  };
+
+  //  Mutation to update alias
+  const updateAliasMutation = useMutation(
+    async (alias: IEwallet): Promise<IEwallet> => {
+      const response = await axios.post<IEwallet>(
+        `${variables.UPDATE_ALIAS}${selectedWallet?.id}`,
+        alias
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        closeModals();
+        toast.success("Ewallet Name updated successfully!", {
+          autoClose: 3000,
+        });
+      },
+      onError: (error: any) => {
+        let errorMessage = "An error occurred";
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.walletId) {
+            errorMessage = backendError.errors.walletId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+
+  const updateAlias = (data: IEwallet & { ewalletId: number | undefined }) => {
+    updateAliasMutation.mutate(data);
+  };
+
+  // const incrementCart = (amount: number) => {
+  //   setCartItems((prev) => prev + 1);
+  //   setCartTotal((prev) => prev + amount);
+  // };
+
+  const closeModals = () => {
+    setPreferredModalOpen(false);
+    setAliasModalOpen(false);
+    setSelectedWallet(undefined);
+    setFormError(null);
+    setAddSubscriptionModalOpen(false);
+    setCautionModalOpen(false);
+    setAddSubscriptionModalOpen(false);
+    setAddToCartModalOpen(false);
+    setTopUpModalOpen(false);
+  };
+
+  const value = {
+    wallets,
+    isLoading,
+    error,
+    openMenuIndex,
+    selectedWallet,
+    // cartItems,
+    // cartTotal,
+    isPreferredModalOpen,
+    isAliasModalOpen,
+    isAddSubscriptionModalOpen,
+    isCautionModalOpen,
+    isAddToCartModalOpen,
+    isTopUpModalOpen,
+    toggleMenu,
+    closeMenu,
+    closeAddToCart,
+    closeAddSubscriptionModalOpen,
+    closeCautionModal,
+    // incrementCart,
+    setSelectedWallet,
+    performWalletAction,
+    openPreferredModal,
+    setAddToCartModalOpen,
+    setAddSubscriptionModalOpen,
+    setPreferredWallet,
+    openTopUpModal,
+    openAliasModal,
+    closeModals,
+    updateAlias,
+    addWallet,
+    refetchWallets: refetch,
+    handleAddSubscriptionClick,
+    updateAliasLoading: updateAliasMutation.isLoading,
+    updateAliasError: updateAliasMutation.error,
+    setPreferredAccountLoading: setPreferredWalletMutation.isLoading,
+    formError,
+    setFormError,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children} </WalletContext.Provider>
+  );
+};
+
+export { WalletContext };
+
