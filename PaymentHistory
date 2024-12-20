@@ -1,0 +1,182 @@
+npm install jspdf jspdf-autotable
+
+types.d.ts
+
+import "jspdf-autotable";
+
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
+
+
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import styles from "./TableData.module.css";
+import React from "react";
+import DownloadIcon from "../../assets/Download.svg";
+
+interface Row {
+  TransactionId: number;
+  Date: string;
+  PaymentMethod: string;
+  Amount: string;
+}
+
+const TableComponent: React.FC = () => {
+  // Dummy data for dive table
+  const data: Row[] = [
+    {
+      TransactionId: 1,
+      Date: "John Doe",
+      PaymentMethod: "john.doe@example.com",
+      Amount: "Admin",
+    },
+    {
+      TransactionId: 2,
+      Date: "Jane Smidiv",
+      PaymentMethod: "jane.smidiv@example.com",
+      Amount: "Editor",
+    },
+    {
+      TransactionId: 3,
+      Date: "Sam Johnson",
+      PaymentMethod: "sam.johnson@example.com",
+      Amount: "Viewer",
+    },
+  ];
+
+  // Function to handle PDF download
+  const handleDownload = (row: Row) => {
+    const doc = new jsPDF();
+
+    doc.text(`Transaction Details`, 14, 10);
+
+    const columns = ["Transaction ID", "Date", "Payment Method", "Amount"];
+    const rows = data.map((row) => [
+      row.TransactionId,
+      row.Date,
+      row.PaymentMethod,
+      row.Amount,
+    ]); // Table rows
+    // doc.text(`Date: ${row.Date}`, 10, 20);
+    // doc.text(`PaymentMethod: ${row.PaymentMethod}`, 10, 30);
+    // doc.text(`Amount: ${row.Amount}`, 10, 40);
+
+    doc.autoTable({
+      head: [columns], // Header row
+      body: rows,
+      startY: 20, // Start position below the title
+      styles: {
+        halign: "left", // Horizontal alignment
+        valign: "middle", // Vertical alignment
+        fontSize: 10, // Font size for table text
+      },
+      headStyles: {
+        fillColor: "#007BFF", // Blue background for header
+        textColor: "#ffffff", // White text for header
+      },
+    });
+
+    doc.save(`${row.Date}_details.pdf`);
+  };
+
+  return (
+    <div className={styles.tableContainer}>
+      <div className={styles.header}>
+        <div>TransactionId</div>
+        <div>Date</div>
+        <div>PaymentMethod</div>
+        <div>Amount</div>
+        <div>Actions</div>
+      </div>
+      {data.map((row) => (
+        <div className={styles.row} key={row.TransactionId}>
+          <div>{row.TransactionId}</div>
+          <div>{row.Date}</div>
+          <div>{row.PaymentMethod}</div>
+          <div>{row.Amount}</div>
+          <div>
+            <button
+              className={styles.downloadButton}
+              onClick={() => handleDownload(row)}
+            >
+              <img
+                src={DownloadIcon}
+                alt="Download Icon"
+                className={styles.icon}
+              />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default TableComponent;
+
+.tableContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Space between rows */
+}
+
+.header,
+.row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 2fr 1fr; /* Adjust column sizes as needed */
+  align-items: center; /* Center items vertically */
+  text-align: left;
+  gap: 10px; /* Space between columns */
+  padding: 10px;
+}
+
+.header {
+  background-color: #1d3083;
+  color: white;
+  font-weight: bold;
+}
+
+.row {
+  background-color: #ffffff;
+  border: 1px solid #e9e5e5;
+  border-radius: 8px;
+}
+
+.row:hover {
+  background-color: #f9f9f9; /* Highlight row on hover */
+}
+
+.icon {
+  width: 24px; /* Adjust size as needed */
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle; /* Aligns the icon with text if present */
+}
+
+.downloadButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease-in-out;
+}
+
+.downloadButton:hover {
+  transform: scale(1.1); /* Slightly enlarges the icon on hover */
+}
+
+@media (max-width: 600px) {
+  .header,
+  .row {
+    grid-template-columns: 1fr; /* Stack all items */
+    text-align: left; /* Align text to the left */
+  }
+
+  .header div,
+  .row div {
+    margin-bottom: 5px; /* Add spacing between items */
+  }
+}
