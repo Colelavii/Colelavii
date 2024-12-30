@@ -1,0 +1,249 @@
+import { useForm } from "react-hook-form";
+import SolidButton from "../../../../../buttons/SolidButton";
+import FormLabel from "../../../../../label/FormLabel";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import { Input } from "../../../../../textfield/Input";
+import styles from "./Security.module.css";
+import FormStyles from "./../../../../../FormFields.module.css";
+import React, { useContext, useState } from "react";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import { useChangePassword } from "../../../../../../hooks/useChangePassword";
+
+interface UpdatePasswordFormValues {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+const PasswordTest: React.FC = () => {
+  const authContext = useContext(AuthContext);
+  const { authState } = authContext;
+  const { changePassword, isLoading, error } = useChangePassword();
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isDirty, isSubmitting },
+  } = useForm<UpdatePasswordFormValues>();
+
+  const currentPassword = watch("currentPassword");
+  const newPassword = watch("newPassword");
+  const confirmPassword = watch("confirmPassword");
+
+  // const CheckMark = () => (
+  //   <span style={{ color: "green", marginLeft: "8px" }}></span>
+  // );
+
+  const onSubmit = async (data: UpdatePasswordFormValues) => {
+    // setSubmissionError(null);
+    // setIsSubmitted(false);
+
+    const success = await changePassword(
+      "53694",
+      data.currentPassword,
+      data.newPassword,
+      data.confirmPassword
+    );
+    if (success) {
+      alert("Password changed successfully!");
+      reset();
+    }
+
+    try {
+      console.log("Form Data", data);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmissionError("Failed to update password. Please try again.");
+      console.log("Error updating profile details", error);
+    }
+  };
+
+  return (
+    // <FormProvider {...methods}>
+    //   <ToastContainer />
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <StandardLayout
+        header="Password"
+        footer={
+          <SolidButton
+            className={FormStyles.solidBtn}
+            type="submit"
+            onClick={() => {
+              console.log("Save Button clicked");
+            }}
+            disabled={isLoading}
+          >
+            {isLoading ? "Updating..." : "Update Password"}
+            {/* {isProfileDetailsLoading ? "Saving..." : "Save Changes"} */}
+          </SolidButton>
+        }
+      >
+        {isSubmitted && (
+          <p style={{ color: "green" }}>Form submitted successfully!</p>
+        )}
+        {error && <p style={{ color: "red" }}> Error: {error}</p>}
+        {/* {showLoadingModal && modifiedFields && (
+            <LoadingModal
+              isOpen={showLoadingModal}
+              onClose={handleCloseModal}
+              modifiedFields={modifiedFields}
+              onProceed={handleProceed}
+            />
+          )} */}
+        <div className={styles.pass}>
+          <div className={styles["input-column"]}>
+            {" "}
+            <FormLabel id="currentPassword" label="Current Password" />
+            <Input
+              id="currentPassword"
+              type="text"
+              placeholder="***************"
+              {...register("currentPassword", {
+                required: true,
+                minLength: 7,
+                maxLength: 25,
+              })}
+            />
+            {errors.currentPassword && <p>{errors.currentPassword.message}</p>}
+            {errors.currentPassword?.type === "required" && (
+              <p className={FormStyles.errors}>
+                The currentPassword is required
+              </p>
+            )}
+            {errors.currentPassword?.type === "minLength" && (
+              <p className={FormStyles.errors}>Must be atleast 7 characters</p>
+            )}
+            {errors.currentPassword?.type === "maxLength" && (
+              <p className={FormStyles.errors}>Must not exceed 25 characters</p>
+            )}
+          </div>
+          <div className={styles["input-column"]}>
+            <FormLabel id="newPassword" label="New Password" />
+            <Input
+              id="newPassword"
+              type="text"
+              placeholder="***************"
+              {...register("newPassword", {
+                required: true,
+                minLength: 7,
+                maxLength: 25, //just example
+                validate: (value) =>
+                  value !== currentPassword ||
+                  "New Password cannot be the same as Current Password",
+              })}
+            />
+            {errors.newPassword && (
+              <p className={FormStyles.errors}>{errors.newPassword.message}</p>
+            )}
+            {errors.newPassword?.type === "required" && (
+              <p className={FormStyles.errors}>
+                The newPassword code field is required
+              </p>
+            )}
+            {errors.newPassword?.type === "minLength" && (
+              <p className={FormStyles.errors}>Must be atleast 7 characters</p>
+            )}
+            {errors.newPassword?.type === "maxLength" && (
+              <p className={FormStyles.errors}>Must not exceed 25 characters</p>
+            )}
+          </div>
+          <div className={styles["input-column"]}>
+            <FormLabel id="confirmPassword" label="Confirm Password" />
+            <Input
+              id="confirmPassword"
+              type="text"
+              placeholder="***************"
+              {...register("confirmPassword", {
+                required: true,
+                minLength: 7,
+                maxLength: 25, //just example
+                validate: (value) =>
+                  value === newPassword ||
+                  "Confirm Password must match the New Password",
+              })}
+            />
+            {errors.confirmPassword && (
+              <p className={FormStyles.errors}>
+                {errors.confirmPassword.message}
+              </p>
+            )}
+            {errors.confirmPassword?.type === "required" && (
+              <p className={FormStyles.errors}>
+                The confirmPassword field is required
+              </p>
+            )}
+          </div>
+        </div>{" "}
+      </StandardLayout>
+    </form>
+    // </FormProvider>
+  );
+};
+
+export default PasswordTest;
+import { useState } from "react";
+import { variables } from "../Variables";
+import axios from "axios";
+
+interface UseChangePasswordReturn {
+  changePassword: (
+    websiteSubscriberId: string | undefined,
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ) => Promise<boolean>;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export function useChangePassword(): UseChangePasswordReturn {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const changePassword = async (
+    websiteSubscriberId: string | undefined,
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(
+        `${variables.CHANGE_PASSWORD}`,
+        {
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        },
+        {
+          params: {
+            websiteSubscriberId,
+          },
+        }
+      );
+
+      if (typeof response.data === "boolean") {
+        return response.data;
+      }
+
+      setIsLoading(false);
+
+      return false;
+    } catch (err) {
+      setIsLoading(false);
+
+      if (axios.isAxiosError(err) && err.response?.data.detailMessage) {
+        setError(err.response.data.detailMessage);
+      } else {
+        setError("Failed to change password");
+      }
+      return false;
+    }
+  };
+  return { changePassword, isLoading, error };
+}
