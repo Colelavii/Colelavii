@@ -1,0 +1,1 @@
+Security:1 Access to XMLHttpRequest at 'https://int-dev.cojamaica.com/am/api/v1/ChangePassword?websiteSubscriberId=53694' from origin 'http://localhost:5173' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
