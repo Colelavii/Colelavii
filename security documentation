@@ -1,0 +1,17 @@
+/**
+ * ModalError Component
+ * 
+ * A reusable component for displaying error messages in a styled container.
+ * 
+ * Props:
+ * - `errorMessage` (string | undefined): The error message to display. If undefined or empty, nothing will render.
+ * 
+ * Example Usage:
+ * <ModalError errorMessage="An error occurred. Please try again." />
+ * 
+ * Notes:
+ * - Integrates with CSS Modules for styling. Ensure `Modal.module.css` is loaded.
+ * - Uses CSS variables for theming: 
+ *    - `--error-bg-color`: Background color of the error container.
+ *    - `--error-color`: Text color of the error message.
+ */
