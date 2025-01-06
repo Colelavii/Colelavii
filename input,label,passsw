@@ -1,0 +1,319 @@
+import * as React from "react";
+import styles from "./../FormFields.module.css";
+import { UseFormRegisterReturn } from "react-hook-form";
+
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  /** react-hook-forms's register object for this field */
+  register: UseFormRegisterReturn;
+  /** ARIA attribute linking to an error message */
+  ariaDescribedBy?: string;
+}
+
+/**
+ * A reusable Input component
+ * Accepts react-hook-form's register to handle validation/state
+ */
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, disabled, register, ariaDescribedBy, ...props }, ref) => {
+    return (
+      <input
+        {...register}
+        className={`${styles["form-control"]} ${disabled && styles.disabled}`}
+        ref={ref}
+        disabled={disabled}
+        {...props}
+        aria-describedBy={ariaDescribedBy}
+      />
+    );
+  }
+);
+Input.displayName = "Input";
+
+export { Input };
+
+
+
+import React, { useContext, useState } from "react";
+import { useForm } from "react-hook-form";
+
+import SolidButton from "../../../../../buttons/SolidButton";
+import FormLabel from "../../../../../label/FormLabel";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import { Input } from "../../../../../textfield/Input";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import { useChangePassword } from "../../../../../../hooks/useChangePassword";
+
+import styles from "./Security.module.css";
+import FormStyles from "./../../../../../FormFields.module.css";
+import { SuccessModal } from "../../../../../modals/success/SuccessModal";
+import ErrorMessage from "../../../../../errormessage/ErrorMessage";
+
+interface UpdatePasswordFormValues {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+const PasswordTest: React.FC = () => {
+  const authContext = useContext(AuthContext);
+  const { authState } = authContext;
+
+  const { changePassword, isLoading, error } = useChangePassword();
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isDirty, isSubmitting },
+  } = useForm<UpdatePasswordFormValues>({
+    // mode: "onChange",
+  });
+
+  const currentPassword = watch("currentPassword");
+  const newPassword = watch("newPassword");
+  const confirmPassword = watch("confirmPassword");
+
+  const isFieldValid = (
+    fieldName: "currentPassword" | "newPassword" | "confirmPassword"
+  ) => {
+    return watch(fieldName) && !errors[fieldName];
+  };
+  const CheckMark = () => (
+    <span style={{ color: "green", marginLeft: "8px" }}>PPP</span>
+  );
+
+  const onSubmit = async (data: UpdatePasswordFormValues) => {
+    setSubmissionError(null);
+
+    const success = await changePassword(
+      "53694", // Temp should be authState.subscriberId
+      data.currentPassword,
+      data.newPassword,
+      data.confirmPassword
+    );
+
+    if (success) {
+      // alert("Password changed successfully!");
+      setShowSuccessModal(true);
+      reset();
+    } else {
+      if (error) {
+        setSubmissionError(error);
+      } else {
+        setSubmissionError("Failed to update password. Please try again.");
+      }
+    }
+  };
+
+  const handleModalClose = () => {
+    setShowSuccessModal(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <StandardLayout
+        header="Password"
+        footer={
+          <SolidButton
+            className={FormStyles.solidBtn}
+            type="submit"
+            disabled={isLoading || isSubmitting}
+          >
+            {isLoading || isSubmitting ? "Updating..." : "Update Password"}
+          </SolidButton>
+        }
+      >
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <SuccessModal
+            isOpen={showSuccessModal}
+            message="Your password was updated successfully!"
+            onClose={handleModalClose}
+          />
+        )}
+        {/* Error Message */}
+        {submissionError && (
+          <ErrorMessage errorMessage={submissionError} showPrefix />
+        )}
+        {/* If there's a direct error from the hook (might be the same as submissionError) */}
+        {error && !submissionError && (
+          <ErrorMessage errorMessage={error} showPrefix />
+        )}
+        {/* {showLoadingModal && modifiedFields && (
+            <LoadingModal
+              isOpen={showLoadingModal}
+              onClose={handleCloseModal}
+              modifiedFields={modifiedFields}
+              onProceed={handleProceed}
+            />
+          )} */}
+        <div className={styles.pass}>
+          <div className={styles["input-column"]}>
+            {" "}
+            <FormLabel htmlFor="currentPassword" label="Current Password" />
+            <Input
+              id="currentPassword"
+              type="password"
+              placeholder="***************"
+              register={register("currentPassword", {
+                required: true,
+                minLength: 7,
+                maxLength: 25,
+              })}
+              autoComplete="off"
+            />
+            {errors.currentPassword?.type === "required" && (
+              <p className={FormStyles.errors}>
+                The currentPassword is required
+              </p>
+            )}
+            {errors.currentPassword?.type === "minLength" && (
+              <p className={FormStyles.errors}>Must be atleast 7 characters</p>
+            )}
+            {errors.currentPassword?.type === "maxLength" && (
+              <p className={FormStyles.errors}>Must not exceed 25 characters</p>
+            )}
+            {/* <FormLabel htmlFor="currentPassword" label="Current Password" />
+            <Input
+              id="currentPassword"
+              type="text"
+              placeholder="***************"
+              register={register("currentPassword", {
+                required: "Current Password is required.",
+                minLength: {
+                  value: 7,
+                  message: "Must be atleast 7 characters.",
+                },
+                maxLength: {
+                  value: 25,
+                  message: "Must not exceed 25 characters.",
+                },
+              })}
+              ariaDescribedBy="currentPasswordError"
+            />
+            {/* Checkmark if valid *
+            {isFieldValid("currentPassword") && <CheckMark />}
+            {/* Display errors *
+            {errors.currentPassword && (
+              <ErrorMessage
+                errorMessage={errors.currentPassword.message}
+                id="currentPasswordError"
+              />
+            )} */}
+          </div>
+          <div className={styles["input-column"]}>
+            <FormLabel htmlFor="newPassword" label="New Password" />
+            <Input
+              id="newPassword"
+              type="text"
+              disabled
+              placeholder="***************"
+              register={register("newPassword", {
+                required: "New Password is required.",
+                minLength: {
+                  value: 7,
+                  message: "Must be atleast 7 characters.",
+                },
+                maxLength: {
+                  value: 25,
+                  message: "Must not exceed 25 characters.",
+                },
+                validate: (value) =>
+                  value !== currentPassword ||
+                  "New Password cannot be the same as Current Password.",
+              })}
+              autoComplete="off"
+            />
+            {/* Checkmark if valid */}
+            {isFieldValid("newPassword") && <CheckMark />}
+
+            {/* Display errors */}
+            {errors.newPassword && (
+              <ErrorMessage errorMessage={errors.newPassword.message} />
+            )}
+          </div>
+          <div className={styles["input-column"]}>
+            <FormLabel htmlFor="confirmPassword" label="Confirm Password" />
+            <Input
+              id="confirmPassword"
+              type="text"
+              placeholder="***************"
+              register={register("confirmPassword", {
+                required: "Confirm Password is required.",
+                minLength: {
+                  value: 7,
+                  message: "Must be atleast 7 characters.",
+                },
+                maxLength: {
+                  value: 25,
+                  message: "Must not exceed 25 characters.",
+                },
+                validate: (value) =>
+                  value === newPassword ||
+                  "Confirm Password must match the New Password.",
+              })}
+              autoComplete="off"
+            />
+            {/* Checkmark if valid */}
+            {isFieldValid("confirmPassword") && <CheckMark />}
+
+            {/* Display errors */}
+            {errors.confirmPassword && (
+              <ErrorMessage errorMessage={errors.confirmPassword.message} />
+            )}
+          </div>
+        </div>{" "}
+      </StandardLayout>
+    </form>
+  );
+};
+
+export default PasswordTest;
+
+import React, { ReactNode } from "react";
+import styles from "../FormFields.module.css";
+
+/**
+ * A reusable label component.
+ * Ensures proper association via htmlFor
+ *
+ * Props:
+ * - children/ label: The label text
+ * - htmlFor: ID of the form control to associate with
+ * - isRequired: Assigns assterik if field is required
+ * - isOptional: Appends the word optional to optional fields
+ */
+interface FormLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  htmlFor: string;
+  label?: string;
+  children?: ReactNode;
+  isRequired?: boolean;
+  isOptional?: boolean;
+}
+const FormLabel: React.FC<FormLabelProps> = ({
+  htmlFor,
+  id,
+  label,
+  children,
+  isRequired = false,
+  isOptional = false,
+  ...props
+}) => {
+  return (
+    <label htmlFor={htmlFor} id={id} className={styles.label} {...props}>
+      {label}
+      {isRequired && <span className={styles.required} aria-hidden="true" />}
+      {isRequired && (
+        <span className={styles["visually-hidden"]}>Required</span>
+      )}
+      {isOptional && <span className={styles.optionalText}>(optional)</span>}
+      {children}
+    </label>
+  );
+};
+
+export default FormLabel;
