@@ -1,0 +1,18 @@
+// layouts/MinimalLayout.tsx
+import React from "react";
+import Header from "../Header";
+
+interface MinimalLayoutProps {
+  children: React.ReactNode;
+}
+
+const MinimalLayout: React.FC<MinimalLayoutProps> = ({ children }) => {
+  return (
+    <>
+      <Header />
+      <main style={{ padding: "2rem" }}>{children}</main>
+    </>
+  );
+};
+
+export default MinimalLayout;
