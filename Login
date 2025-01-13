@@ -1,232 +1,140 @@
- background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M4.1 9.7L0 5.9l1.4-1.4 2.7 2.6 5-4.9L10.5.9 4.1 7.3z'/%3E%3C/svg%3E");
-
-import { useContext, useState } from "react";
-import { useForm } from "react-hook-form";
-import logo from "../../../assets/logo.png";
-import styles from "./Login.module.css";
-import AuthContext from "../../../state-management/contexts/authContext";
-import { SecurityFormValues } from "../eservsidebar/toolssidebar/settings/security/PasswordTest";
-import { useCheckCredentials } from "../../../hooks/useCheckCredentials";
-import Input from "../../textfield/Input";
-import ErrorMessage from "../../errormessage/ErrorMessage";
-import { useNavigate } from "react-router-dom";
-import { useFetchProfileDetails } from "../../../hooks/useProfile";
-
-const Login = () => {
-  const [isCloseVisible, setCloseVisible] = useState(true);
-  const [submissionError, setSubmissionError] = useState<string | null>(null);
-
-  const { dispatch } = useContext(AuthContext);
-  const navigate = useNavigate();
-
-  const { checkCredentials, isLoading, error } = useCheckCredentials();
-  const { data: profile } = useFetchProfileDetails();
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<SecurityFormValues>({});
-
-  // Add logic to handle button click and toggle visibility
-  const handleButtonClick = () => {
-    setCloseVisible(!isCloseVisible);
-  };
-
-  const onSubmit = async (data: SecurityFormValues) => {
-    setSubmissionError(null);
-
-    const success = await checkCredentials(data.email, data.currentPassword);
-
-    if (success) {
-      alert("Logged in successfully!");
-      reset();
-      dispatch({
-        type: "LOGIN",
-        username: profile?.firstName,
-        subscriberId: profile?.subscriberId,
-        emailAddress: data.email,
-      });
-      navigate("/eservice/Settings/Profile"); //Redirect to E-Service after login
-    } else {
-      if (error) {
-        setSubmissionError(error);
-      } else {
-        setSubmissionError("Failed to login. Please try again.");
-      }
-    }
-  };
-  return (
-    <div className={styles["login-background"]}>
-      {" "}
-      <div className={styles["login-container"]}>
-        <div className={styles["login-logo"]}>
-          <img src={logo} alt="coj logo" />
-        </div>
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className={styles["login-section"]}
-        >
-          <h1> Hello! Welcome back</h1>
-          <p>Log in to access your dashboard</p>
-          {/* Error Message */}
-          {submissionError && (
-            <ErrorMessage errorMessage={submissionError} showPrefix />
-          )}
-          {/* If there's a direct error from the hook (might be the same as submissionError) */}
-          {error && !submissionError && (
-            <ErrorMessage errorMessage={error} showPrefix />
-          )}
-          <div className={styles["login-section-input"]}>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Email Address"
-              register={register("email", {
-                required: "Email Address is required.",
-              })}
-              autoComplete="email"
-              ariaDescribedBy="emailError"
-            />
-            {errors.email && (
-              <ErrorMessage
-                errorMessage={errors.email.message}
-                id="emailError"
-              />
-            )}
-            <Input
-              id="currentPassword"
-              type="password"
-              placeholder="***************"
-              register={register("currentPassword", {
-                required: "Password is required.",
-                minLength: {
-                  value: 8,
-                  message: "Password must be at least 8 characters long.",
-                },
-                maxLength: {
-                  value: 25,
-                  message: "Must not exceed 25 characters.",
-                },
-              })}
-              autoComplete="off"
-              ariaDescribedBy="currentPasswordError"
-            />
-            {errors.currentPassword && (
-              <ErrorMessage errorMessage={errors.currentPassword.message} />
-            )}{" "}
-          </div>{" "}
-          <div className={styles["login-options"]}>
-            <label>
-              <input type="checkbox" className={styles["input-space"]} />
-              Remember me
-            </label>
-            Forgot password?
-          </div>
-          <button
-            //disabled={!isValid}
-            type="submit"
-            //onClick={handleLogin}
-          >
-            Login
-          </button>
-          <p>Don’t have an account? Sign up</p>
-        </form>
-      </div>{" "}
-      {isCloseVisible && (
-        <div className={styles["browser-notification"]}>
-          <p>
-            Please note: Internet Explorer and other outdated browsers are not
-            fully supported for browsing this website. For the best experience
-            when using our website, please use Firefox or Chrome.
-            <button onClick={handleButtonClick}>Close</button>{" "}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Login;
-
+/* The container holding the logo */
 .login-logo {
   padding: 2rem;
 }
 .login-logo img {
   width: 227px;
 }
+
+/* Background for the entire page */
 .login-background {
   background-image: url("../../../assets/african.png");
+  background-size: cover;
+  background-repeat: no-repeat;
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
 }
+
+/* The main container that holds the form & content */
 .login-container {
-  height: 100vh;
+  /* height: 100vh; */
+  padding: 10px;
   width: 40%;
   background-color: rgb(255, 255, 255, 0.8);
 }
+
+/* The login form section */
 .login-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 70px;
+  margin-top: 8rem;
+  padding: 0 2rem;
 }
-.login-section h1 {
+.login-section h1,
+.login-section-input input::placeholder {
   color: var(--primary-color);
 }
 
-.login-section-input input {
+/* .login-section p {
+  color: #000;
+  margin-bottom: 2rem;
+  text-align: center;
+} */
+.login-section-input {
   width: 439px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 50px;
+  gap: 0.2rem;
+}
+
+/* Input fields inside .login-section */
+.login-section-input input {
+  width: 100%;
   height: 48px;
-  margin-top: 30px;
   border-radius: 6px;
-  border: 1px solid var(--primary-color);
+  border: 0.5px solid var(--primary-color);
+  background-color: transparent;
   color: var(--primary-color);
   padding: 19px;
-  background-color: transparent;
+  font-size: 18px;
 }
+
+/* The login button */
 .login-section button {
-  width: 439px;
+  width: 100%;
+  max-width: 439px;
   height: 64px;
   border-radius: 6px;
   border: none;
   background-color: var(--primary-color);
   cursor: pointer;
-  color: white;
+  color: var(--white);
   font-size: 28px;
   margin-bottom: 15px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
+/* Slightly darker shade on hover */
+.login-section button:hover {
+  background-color: #1e3a99;
+}
+
+/* Options row: "Remember me" + "Forgot password?" */
 .login-options {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  padding: 30px;
-}
-.login-options input {
-  margin-right: 10px;
-  width: 14px;
-  height: 14px;
-}
-.login-options label {
-  margin-right: 205px;
+  padding: 30px 5px;
+  width: 100%;
+  max-width: 439px;
 }
 
-.login-button {
-  background-color: #ccc;
+/* Checkbox  */
+.custom-checkbox {
+  width: 24px;
+  height: 24px;
+  border: 0.5px solid var(--primary-color);
+  border-radius: 4px;
+  background-color: transparent;
+  margin-right: 10px;
+  appearance: none;
 }
+
+/* Checkbox  */
+.custom-checkbox:checked {
+  background-color: var(--primary-color);
+  background-size: 60% 60%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M4.1 9.7L0 5.9l1.4-1.4 2.7 2.6 5-4.9L10.5.9 4.1 7.3z'/%3E%3C/svg%3E");
+}
+
+.login-options .remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.login-options .forgot-password,
+.signup-link {
+  font-size: 18px;
+  color: var(--link-color);
+  cursor: pointer;
+}
+/* Notification for outdated browser at the bottom */
 .browser-notification {
   position: fixed;
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 60px;
+  height: 70px;
   background-color: rgba(242, 197, 107, 0.8);
-  /* background-color: #f2c56b; */
-  padding: 5px;
+  padding: 10px;
 }
 
 .browser-notification p {
@@ -234,18 +142,118 @@ export default Login;
   align-items: center;
   justify-content: center;
   color: #000;
+  margin: 0;
 }
 
 .browser-notification button {
   width: 70px;
-  height: 40px;
-  padding: 5px;
-  font-size: 18px;
+  height: 30px;
+  font-size: 14px;
   background: var(--primary-color);
   color: var(--white);
   margin-left: 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  padding: 4px;
 }
 
+/* ------------- MEDIA QUERIES -------------*/
+
+/* Large Tablets / Desktops (between ~ 768px - 1200px) */
+/* @media (max-width: 1200px) {
+  .login-container {
+    width: 50%;
+  }
+} */
+
+/* Tablets / Medium (between ~ 991px - 768px) */
+@media (min-width: 991px) {
+  .login-logo {
+    padding: 0.5rem;
+  }
+  .login-container {
+    width: 40%;
+  }
+  .login-section {
+    margin-top: 1rem;
+  }
+  .login-section-input {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  .login-options {
+    padding: 15px 5px;
+  }
+  .login-section-input input {
+    height: 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    width: 60%;
+    min-height: auto;
+  }
+  .login-section {
+    margin-top: 2rem;
+  }
+  .login-section-input {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .login-section button {
+    width: 100%;
+  }
+
+  .login-options {
+    width: 100%;
+  }
+}
+
+import React, { useContext } from "react";
+import { useFetchProfileDetails } from "../../../hooks/useProfile";
+import AuthContext from "../../../state-management/contexts/authContext";
+import { useNavigate } from "react-router-dom";
+
+const LoginPage = () => {
+  const authContext = useContext(AuthContext);
+  const navigate = useNavigate();
+  const { data: profile } = useFetchProfileDetails();
+
+  if (!authContext) {
+    throw new Error("LoginPage must be usedd within an AuthProvider");
+  }
+
+  const { dispatch } = authContext;
+
+  const handleLogin = () => {
+    dispatch({
+      type: "LOGIN",
+      username: profile?.firstName,
+      subscriberId: profile?.subscriberId,
+      emailAddress: profile?.emailAddress,
+    });
+    navigate("/eservice/Settings/Profile"); //Redirect to E-Service after login
+  };
+  return (
+    <div>
+      {" "}
+      <h1>Login Page</h1>{" "}
+      <button type="submit" onClick={handleLogin}>
+        Login
+      </button>
+    </div>
+  );
+};
+
+export default LoginPage;
+
+when i add height 100vh to  @media (min-width: 991px) {
+ .login-container }
+it doesn't contain everything in the container when there
+is an error some items jump out and when i remove it the height 
+of the container does not touch the bottom
+
+and the checkbox tick doesn't show when i check it 
