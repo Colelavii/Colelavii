@@ -1,3 +1,411 @@
+import React, { useEffect, useState } from "react";
+import styles from "./CarouselBackground.module.css";
+interface SlideData {
+  backgroundImage: string;
+  tipTitle: string;
+  heading: string;
+  description: string;
+  headingColor?: "yellow" | "blue";
+  position?: { left: number; top: number };
+}
+
+const slides: SlideData[] = [
+  {
+    backgroundImage: "src/assets/african.png",
+    tipTitle: "PRO TIP #1",
+    heading: "Stay Hydrated!",
+    description:
+      "Reserve your desired business name first, before registering, to check if it is available for use.",
+    headingColor: "yellow",
+    position: { left: -217, top: 600 },
+  },
+  {
+    backgroundImage: "src/assets/african-descent-man-working1.png",
+    tipTitle: "PRO TIP #2",
+    heading: "Stay Extra!",
+    description: "Drink plenty of water throughout the day.",
+    headingColor: "blue",
+    position: { left: 50, top: 80 },
+  },
+];
+const CarouselBackground: React.FC<{ children?: React.ReactNode }> = ({
+  children,
+}) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const nextSlide = () => {
+    setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length);
+  };
+
+  // Optional auto-play effect
+  //   useEffect(() => {
+  //     const intervalId = setInterval(() => {
+  //       nextSlide();
+  //     }, 5000); //5 second interval
+  //     return () => clearInterval(intervalId);
+  //   }, [nextSlide]);
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
+
+  return (
+    <div className={styles["carousel-container"]}>
+      {slides.map((slide, index) => {
+        const isActive = index === currentSlide;
+        const stylePosition = slide.position
+          ? { left: `${slide.position.left}px`, top: `${slide.position.top}px` }
+          : {};
+
+        return (
+          <div
+            key={index}
+            className={`${styles.slide} ${isActive ? styles.active : ""}`}
+            style={{ backgroundImage: ` url(${slide.backgroundImage})` }}
+          >
+            {isActive && (
+              <div className={styles["slide-content"]}>
+                <div className={styles["login-column"]}> {children} </div>
+                <div
+                  className={styles["pro-tips-column"]}
+                  //   style={stylePosition}
+                >
+                  <div className={styles["pro-tip-title"]}>
+                    {slide.tipTitle}
+                  </div>
+                  <div
+                    className={styles["pro-tip-main-heading"]}
+                    style={{
+                      color:
+                        slide.headingColor === "blue"
+                          ? "var(--primary-color)"
+                          : "yellow",
+                    }}
+                  >
+                    {slide.heading}
+                  </div>
+                  <div className={styles["pro-tip-description"]}>
+                    {slide.description}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Indicators aligned in a column on the right */}
+      <div className={styles["indicator-container"]}>
+        {slides.map((_, index) => (
+          <div
+            key={index}
+            className={`${styles.indicator} ${
+              index === currentSlide ? styles.active : ""
+            }`}
+            onClick={() => goToSlide(index)}
+          ></div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default CarouselBackground;
+
+.carousel-container {
+  width: 100%;
+  min-width: 299px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: block;
+  position: relative;
+}
+
+.slide {
+  display: none; /* Hide by default*/
+  width: 100%;
+  min-height: 100vh; /* So each slide can fill full height if short */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: display 0.8s ease-in-out;
+}
+
+.slide.active {
+  display: block;
+}
+
+/* The Pro Tip text box or container that wraps the entire content
+(login + pro tips) as nested children */
+.slide-content {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.login-column {
+  width: 40%;
+}
+
+.pro-tips-column {
+  width: 20%;
+  height: 250px;
+  color: var(--white);
+  /* position: relative; */
+  display: flex;
+  flex-direction: column;
+  /* justify-content: center; */
+  align-items: flex-start;
+  padding: 20px;
+  background-color: rgba(126, 188, 255, 0.8);
+  overflow-y: auto;
+  overflow-wrap: break-word;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) #888;
+}
+/* .pro-tips-column::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+} */
+/* Pro Tip heading */
+.pro-tip-title {
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+}
+
+/* Pro Tip main heading (in color) */
+.pro-tip-main-heading {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffbd19;
+  margin-bottom: 0.5rem;
+}
+
+/* Pro Tip paragraph */
+.pro-tip-description {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* Indicator container on the right side */
+.indicator-container {
+  position: absolute;
+  top: 30%;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-50%); /* Center them vertically */
+  gap: 0.5rem;
+}
+
+/* Each indicator circle */
+.indicator {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--secondary-color);
+  border-radius: 50%;
+  cursor: pointer;
+  background-color: var(--secondary-color);
+  transition: background-color 0.3s ease;
+}
+
+.indicator.active {
+  background-color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+/* Responsive adjustments*/
+@media (max-width: 1200px) {
+  .login-container {
+    width: 90%;
+  }
+}
+
+/* Tablets / Medium (between ~ 991px - 768px) */
+@media (max-width: 991px) {
+  .login-column {
+    width: 80%;
+  }
+  .pro-tips-column {
+    width: 50%;
+  }
+  .indicator-container {
+    position: fixed;
+    top: unset;
+    bottom: 0;
+  }
+}
+@media (max-width: 768px) {
+  .indicator-container {
+    display: none;
+  }
+  .pro-tips-column {
+    width: 100%;
+    margin-left: 0;
+    height: auto;
+    max-height: 250px;
+  }
+  .slide-content {
+    flex-direction: column;
+  }
+
+  .login-column {
+    width: 100%;
+  }
+  .slide-content .pro-tip-main-heading {
+    font-size: 1.2rem;
+  }
+}
+
+import { useContext, useState } from "react";
+import { useForm } from "react-hook-form";
+import logo from "../../assets/logo.png";
+import styles from "./Login.module.css";
+import AuthContext from "../../state-management/contexts/authContext";
+import { SecurityFormValues } from "../eservice/eservsidebar/toolssidebar/settings/security/PasswordTest";
+import { useCheckCredentials } from "../../hooks/useCheckCredentials";
+import Input from "../textfield/Input";
+import ErrorMessage from "../errormessage/ErrorMessage";
+import { Link, useNavigate } from "react-router-dom";
+import { useFetchProfileDetails } from "../../hooks/useProfile";
+import SolidButton from "../buttons/SolidButton";
+
+const Login = () => {
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  const { dispatch } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const { checkCredentials, isLoading, error } = useCheckCredentials();
+  const { data: profile } = useFetchProfileDetails();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<SecurityFormValues>({});
+
+  const onSubmit = async (data: SecurityFormValues) => {
+    setSubmissionError(null);
+
+    const success = await checkCredentials(data.email, data.currentPassword);
+
+    if (success) {
+      alert("Logged in successfully!");
+      reset();
+      dispatch({
+        type: "LOGIN",
+        username: profile?.firstName,
+        subscriberId: profile?.subscriberId,
+        emailAddress: data.email,
+      });
+      navigate("/eservice/Settings/Profile"); //Redirect to E-Service after login
+    } else {
+      if (error) {
+        setSubmissionError(error);
+      } else {
+        setSubmissionError("Failed to login. Please try again.");
+      }
+    }
+  };
+  return (
+    <div className={styles["login-container"]}>
+      <div className={styles["login-logo"]}>
+        <img src={logo} alt="coj logo" />
+      </div>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className={styles["login-section"]}
+      >
+        <h1> Hello! Welcome back</h1>
+        <p>Log in to access your dashboard</p>
+
+        {/* Error Message */}
+        {submissionError && (
+          <ErrorMessage errorMessage={submissionError} showPrefix />
+        )}
+        {/* If there's a direct error from the hook (might be the same as submissionError) */}
+        {error && !submissionError && (
+          <ErrorMessage errorMessage={error} showPrefix />
+        )}
+
+        <div className={styles["login-section-input"]}>
+          <Input
+            id="email"
+            type="email"
+            placeholder="Username"
+            register={register("email", {
+              required: "Username is required.",
+            })}
+            autoComplete="email"
+            ariaDescribedBy="emailError"
+          />
+          {errors.email && (
+            <ErrorMessage errorMessage={errors.email.message} id="emailError" />
+          )}
+
+          <Input
+            id="currentPassword"
+            type="password"
+            placeholder="Password"
+            register={register("currentPassword", {
+              required: "Password is required.",
+              minLength: {
+                value: 8,
+                message: "Password must be at least 8 characters long.",
+              },
+              maxLength: {
+                value: 25,
+                message: "Must not exceed 25 characters.",
+              },
+            })}
+            autoComplete="off"
+            ariaDescribedBy="currentPasswordError"
+          />
+          {errors.currentPassword && (
+            <ErrorMessage errorMessage={errors.currentPassword.message} />
+          )}
+        </div>
+        {/* Login Options: custom checkbox + label + forgot password */}
+        <div className={styles["login-options"]}>
+          <div className={styles["remember-me"]}>
+            <input type="checkbox" className={styles["custom-checkbox"]} />
+            <span>Remember me</span>
+          </div>
+          <span className={styles["forgot-password"]}>
+            <Link to="/forgot-password">Forgot password?</Link>
+          </span>
+        </div>
+
+        <SolidButton type="submit" disabled={isLoading}>
+          {isLoading ? "Logging in..." : "Login"}
+        </SolidButton>
+
+        <p>
+          Don’t have an account?{" "}
+          <a className={styles["signup-link"]}>Sign up</a>
+        </p>
+      </form>
+    </div>
+  );
+};
+
+export default Login;
+
+/* The main container that holds the form & content */
+.login-container {
+  width: 100%;
+  min-height: 100vh;
+  overflow-y: auto;
+  background-color: rgb(255, 255, 255, 0.8);
+  box-sizing: border-box;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
 /* The container holding the logo */
 .login-logo {
   padding: 2rem;
@@ -6,29 +414,13 @@
   width: 227px;
 }
 
-/* Background for the entire page */
-.login-background {
-  background-image: url("../../../assets/african.png");
-  background-size: cover;
-  background-repeat: no-repeat;
-  position: relative;
-  min-height: 100vh;
-}
-
-/* The main container that holds the form & content */
-.login-container {
-  /* height: 100vh; */
-  padding: 10px;
-  width: 40%;
-  background-color: rgb(255, 255, 255, 0.8);
-}
-
 /* The login form section */
 .login-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 8rem;
+  margin-bottom: 10rem;
   padding: 0 2rem;
 }
 .login-section h1,
@@ -47,7 +439,6 @@
   display: flex;
   flex-direction: column;
   margin-top: 50px;
-  gap: 0.2rem;
 }
 
 /* Input fields inside .login-section */
@@ -96,22 +487,23 @@
 
 /* Checkbox  */
 .custom-checkbox {
-  width: 24px;
-  height: 24px;
-  border: 0.5px solid var(--primary-color);
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--primary-color);
   border-radius: 4px;
   background-color: transparent;
   margin-right: 10px;
   appearance: none;
+  cursor: pointer;
 }
 
 /* Checkbox  */
 .custom-checkbox:checked {
   background-color: var(--primary-color);
   background-size: 60% 60%;
-  background-position: center center;
+  background-position: center;
   background-repeat: no-repeat;
-  background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M4.1 9.7L0 5.9l1.4-1.4 2.7 2.6 5-4.9L10.5.9 4.1 7.3z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='15' height='15' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M4.1 9.7L0 5.9l1.4-1.4 2.7 2.6 5-4.9L10.5.9 4.1 7.3z'/%3E%3C/svg%3E");
 }
 
 .login-options .remember-me {
@@ -126,73 +518,49 @@
   color: var(--link-color);
   cursor: pointer;
 }
-/* Notification for outdated browser at the bottom */
-.browser-notification {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 70px;
-  background-color: rgba(242, 197, 107, 0.8);
-  padding: 10px;
-}
-
-.browser-notification p {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #000;
-  margin: 0;
-}
-
-.browser-notification button {
-  width: 70px;
-  height: 30px;
-  font-size: 14px;
-  background: var(--primary-color);
-  color: var(--white);
-  margin-left: 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 4px;
-}
 
 /* ------------- MEDIA QUERIES -------------*/
 
 /* Large Tablets / Desktops (between ~ 768px - 1200px) */
-/* @media (max-width: 1200px) {
+@media (max-width: 1200px) {
   .login-container {
-    width: 50%;
+    width: 90%;
   }
-} */
+}
 
 /* Tablets / Medium (between ~ 991px - 768px) */
-@media (min-width: 991px) {
+@media (max-width: 991px) {
   .login-logo {
-    padding: 0.5rem;
+    padding: 2rem;
   }
   .login-container {
-    width: 40%;
+    width: 90%;
   }
   .login-section {
+    margin-top: 2rem;
+  }
+  .login-section button {
+    height: 60px;
     margin-top: 1rem;
+    max-width: none;
   }
   .login-section-input {
     width: 100%;
     margin-top: 1rem;
   }
   .login-options {
-    padding: 15px 5px;
+    padding: 30px 5px;
+    max-width: none;
   }
-  .login-section-input input {
-    height: 4px;
-  }
+  /* .login-section-input input {
+    height: 10px;
+  } */
 }
 
 @media (max-width: 768px) {
   .login-container {
-    width: 60%;
+    width: 100%;
+    min-width: 299px;
     min-height: auto;
   }
   .login-section {
@@ -212,48 +580,43 @@
   }
 }
 
-import React, { useContext } from "react";
-import { useFetchProfileDetails } from "../../../hooks/useProfile";
-import AuthContext from "../../../state-management/contexts/authContext";
-import { useNavigate } from "react-router-dom";
-
-const LoginPage = () => {
-  const authContext = useContext(AuthContext);
-  const navigate = useNavigate();
-  const { data: profile } = useFetchProfileDetails();
-
-  if (!authContext) {
-    throw new Error("LoginPage must be usedd within an AuthProvider");
+@media (max-width: 550px) {
+  .login-section {
+    margin-top: 2rem;
   }
+}
 
-  const { dispatch } = authContext;
+import React, { useState } from "react";
+import styles from "./LoginWithCarousel.module.css";
+import CarouselBackground from "../../components/carouselbackground/CarouselBackground";
+import Login from "../../components/login/Login";
 
-  const handleLogin = () => {
-    dispatch({
-      type: "LOGIN",
-      username: profile?.firstName,
-      subscriberId: profile?.subscriberId,
-      emailAddress: profile?.emailAddress,
-    });
-    navigate("/eservice/Settings/Profile"); //Redirect to E-Service after login
+const LoginWithCarousel: React.FC = () => {
+  const [isCloseVisible, setCloseVisible] = useState(true);
+
+  // Handle close button click and toggle visibility
+  const handleButtonClick = () => {
+    setCloseVisible(!isCloseVisible);
   };
   return (
-    <div>
-      {" "}
-      <h1>Login Page</h1>{" "}
-      <button type="submit" onClick={handleLogin}>
-        Login
-      </button>
-    </div>
+    <>
+      <CarouselBackground>
+        <Login />
+      </CarouselBackground>
+
+      {/* Notification for unsupported browser */}
+      {isCloseVisible && (
+        <div className={styles["browser-notification"]}>
+          <p>
+            Please note: Internet Explorer and other outdated browsers are not
+            fully supported for browsing this website. For the best experience
+            when using our website, please use Firefox or Chrome.
+            <button onClick={handleButtonClick}>Close</button>{" "}
+          </p>
+        </div>
+      )}
+    </>
   );
 };
 
-export default LoginPage;
-
-when i add height 100vh to  @media (min-width: 991px) {
- .login-container }
-it doesn't contain everything in the container when there
-is an error some items jump out and when i remove it the height 
-of the container does not touch the bottom
-
-and the checkbox tick doesn't show when i check it 
+export default LoginWithCarousel;
