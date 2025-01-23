@@ -1,0 +1,46 @@
+interface AddNewEwalletByOwnerRequest {
+  addNewEwallet: (
+    subscriberId: number | undefined,
+    alias: string
+  ) => Promise<boolean>;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export function useAddNewEwalletByOwner(): AddNewEwalletByOwnerRequest {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const addNewEwallet = async (
+    subscriberId: number | undefined,
+    alias: string
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(`${variables.CREATE_NEW_WALLET}`, {
+        subscriberId,
+        alias,
+      });
+
+      if (response.status === 200) {
+        setIsLoading(false);
+        return true;
+      }
+
+      setIsLoading(false);
+      return false;
+    } catch (err) {
+      setIsLoading(false);
+
+      if (axios.isAxiosError(err) && err.response?.data.detailMessage) {
+        setError(err.response.data.detailMessage);
+      } else {
+        setError("Failed to create ewallet");
+      }
+      return false;
+    }
+  };
+  return { addNewEwallet, isLoading, error };
+}
