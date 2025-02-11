@@ -1,0 +1,69 @@
+import React from "react";
+import styles from "./Pagination.module.css";
+
+interface PaginationProps {
+  totalItems: number;
+  onPageChange?: (page: number, itemsPerPage: number) => void;
+}
+
+const Pagination = ({ totalItems, onPageChange }: PaginationProps) => {
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
+
+  const items = [2, 4, 6, 8, 10];
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const handleItemsPerPageChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1);
+    if (onPageChange) {
+      onPageChange(1, Number(e.target.value));
+    }
+  };
+
+  const handlePageChange = (direction: "prev" | "next") => {
+    if (direction === "prev" && currentPage > 1) {
+      setCurrentPage((prev) => {
+        const newPage = prev - 1;
+        if (onPageChange) onPageChange(newPage, itemsPerPage);
+        return newPage;
+      });
+    } else if (direction === "next" && currentPage < totalPages) {
+      setCurrentPage((prev) => {
+        const newPage = prev + 1;
+        if (onPageChange) onPageChange(newPage, itemsPerPage);
+        return newPage;
+      });
+    }
+  };
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  return (
+    <div className={styles.paginationContainer}>
+      <span>Items per page</span>
+      <select>
+        {items.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+
+      <span>
+        {startItem} - {endItem} of {totalItems}
+      </span>
+      <button>
+        <i className="fa fa-angle-left" aria-hidden="true" />
+      </button>
+      <button>
+        <i className="fa fa-angle-right" aria-hidden="true" />
+      </button>
+    </div>
+  );
+};
+
+export default Pagination;
