@@ -1,0 +1,43 @@
+import { useMutation, UseMutationResult } from '@tanstack/react-query';
+import axios, { AxiosError } from 'axios';
+import { variables } from '../Variables';
+
+// Define the shape of the error response from your API
+interface ErrorResponse {
+  detailMessage: string;
+}
+
+// Define the arguments to the changePassword function
+interface ChangePasswordArgs {
+  websiteSubscriberId: string | undefined;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// Here the mutation returns a boolean (true for success)
+// and we specify the error type as AxiosError<ErrorResponse>
+export function useChangePassword(): UseMutationResult<
+  boolean,
+  AxiosError<ErrorResponse>,
+  ChangePasswordArgs
+> {
+  return useMutation<boolean, AxiosError<ErrorResponse>, ChangePasswordArgs>(
+    async ({ websiteSubscriberId, currentPassword, newPassword, confirmPassword }) => {
+      const response = await axios.post(
+        `${variables.CHANGE_PASSWORD}`,
+        { currentPassword, newPassword, confirmPassword },
+        { params: { websiteSubscriberId } }
+      );
+
+      // Axios will throw on non-2xx responses by default,
+      // but if you want to double-check:
+      if (response.status === 200) {
+        return true;
+      }
+
+      // This line is unlikely to be reached if axios throws on error status.
+      throw new Error('Failed to change password');
+    }
+  );
+}
