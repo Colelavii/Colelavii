@@ -1,0 +1,221 @@
+Below is an example of how you might implement a mutation using Axios and React Query's `useMutation` hook in TypeScript. In this example:
+
+- The API expects a POST with both `walletId` and `subscriberId`.
+- If the validation fails, the response is of the form:
+  ```json
+  {
+    "message": "Validation Failed",
+    "errors": ["..."]
+  }
+  ```
+- If the validation passes, the response is:
+  ```json
+  {
+    "canArchive": true
+  }
+  ```
+
+Here's the complete code:
+
+---
+
+### **1. Define Types**
+
+```tsx
+// types.ts
+export interface ArchiveCheckResponse {
+  canArchive?: boolean;  // will be present if validation passes
+  message?: string;      // present when validation fails
+  errors?: string[];     // present when validation fails
+}
+
+export interface ArchiveCheckVariables {
+  walletId: string;
+  subscriberId: string;
+}
+```
+
+---
+
+### **2. Create the Axios Function**
+
+```tsx
+// api.ts
+import axios from "axios";
+import { ArchiveCheckResponse, ArchiveCheckVariables } from "./types";
+
+export const checkArchive = async ({
+  walletId,
+  subscriberId,
+}: ArchiveCheckVariables): Promise<ArchiveCheckResponse> => {
+  const response = await axios.post<ArchiveCheckResponse>("/api/canArchive", {
+    walletId,
+    subscriberId,
+  });
+  return response.data;
+};
+```
+
+---
+
+### **3. Create the useMutation Hook**
+
+```tsx
+// useArchiveCheckMutation.ts
+import { useMutation } from "react-query";
+import { checkArchive } from "./api";
+import { ArchiveCheckResponse, ArchiveCheckVariables } from "./types";
+
+export const useArchiveCheckMutation = () =>
+  useMutation<ArchiveCheckResponse, Error, ArchiveCheckVariables>(checkArchive);
+```
+
+---
+
+### **4. Using the Mutation in a Component**
+
+Here's an example of how you might use the mutation in your component:
+
+```tsx
+// ArchiveFlow.tsx
+import React from "react";
+import { useArchiveCheckMutation } from "./useArchiveCheckMutation";
+import { ArchiveCheckVariables } from "./types";
+
+interface ArchiveFlowProps {
+  walletId: string;
+  subscriberId: string;
+}
+
+const ArchiveFlow: React.FC<ArchiveFlowProps> = ({ walletId, subscriberId }) => {
+  const { mutate, data, error, isLoading } = useArchiveCheckMutation();
+
+  const handleArchiveCheck = () => {
+    const variables: ArchiveCheckVariables = { walletId, subscriberId };
+    mutate(variables, {
+      onSuccess: (data) => {
+        if (data.canArchive) {
+          // Show confirmation modal
+          console.log("Can archive, show confirmation modal");
+        } else {
+          // Show error modal using data.message or data.errors
+          console.error("Validation failed:", data.errors || data.message);
+        }
+      },
+      onError: (error) => {
+        console.error("Archive check error:", error.message);
+      },
+    });
+  };
+
+  return (
+    <div>
+      <button onClick={handleArchiveCheck}>
+        {isLoading ? "Checking..." : "Check Archive"}
+      </button>
+
+      {/* Optionally display error info */}
+      {error && <p style={{ color: "red" }}>{error.message}</p>}
+      {/* You could conditionally render modals here based on the mutation result */}
+    </div>
+  );
+};
+
+export default ArchiveFlow;
+```
+
+---
+
+### **Explanation**
+
+1. **Type Definitions:**  
+   We define our response and variables types to give TypeScript full context of what our API returns.
+
+2. **Axios Function:**  
+   The `checkArchive` function makes a POST request to `/api/canArchive` with the required `walletId` and `subscriberId` and returns the parsed response.
+
+3. **useMutation Hook:**  
+   We create a custom hook (`useArchiveCheckMutation`) that wraps the `checkArchive` function using React Query's `useMutation`. This hook provides a simple interface for triggering the archive check and handling success or error cases.
+
+4. **Component Usage:**  
+   In the `ArchiveFlow` component, when the user triggers the archive check (e.g., by clicking a button), we call `mutate` with the proper variables. Depending on the result:
+   - If `canArchive` is `true`, you can proceed to show a confirmation modal.
+   - If validation fails (with errors or a message), you can display those errors in an error modal.
+   - While the request is in progress, you can display a loading state.
+
+This approach uses best practices by keeping your API calls, types, and component logic separated, and leverages React Query's `useMutation` for asynchronous operations and error handling.
+
+ArchiveFlow is a specialized component that handles the entire archive process (the pre-check, modals, etc.) for a given wallet. Since it's specific to wallet operations, you'll reference ArchiveFlow in your ewallet-related components. For example, when a user clicks the Archive option in your EwalletMenu (which is part of the EwalletCard), you'll trigger ArchiveFlow.
+
+Here's how you might reference it:
+
+---
+
+### Example Integration in EwalletMenu
+
+```tsx
+// EwalletMenu.tsx
+import React, { useState } from "react";
+import { WalletType } from "./types";
+import ArchiveFlow from "./ArchiveFlow";
+
+interface EwalletMenuProps {
+  wallet: WalletType;
+  archiveWallet: (walletId: string) => Promise<void>;
+  subscriberId: string;
+}
+
+const EwalletMenu: React.FC<EwalletMenuProps> = ({ wallet, archiveWallet, subscriberId }) => {
+  const [showArchiveFlow, setShowArchiveFlow] = useState(false);
+
+  const handleArchiveClick = () => {
+    // Open the ArchiveFlow component when the Archive option is clicked
+    setShowArchiveFlow(true);
+  };
+
+  return (
+    <div>
+      {/* Other menu options */}
+      <button onClick={handleArchiveClick}>Archive Wallet</button>
+
+      {/* Render ArchiveFlow only when needed */}
+      {showArchiveFlow && (
+        <ArchiveFlow
+          walletId={wallet.id}
+          subscriberId={subscriberId}
+          archiveWallet={archiveWallet}
+          onClose={() => setShowArchiveFlow(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default EwalletMenu;
+```
+
+---
+
+### Folder Structure
+
+If your project structure groups wallet-related components together, ArchiveFlow might reside in your `ewallet` folder along with EwalletCard and EwalletMenu:
+
+```
+/src
+  /components
+    /ewallet
+      EwalletCard.tsx
+      EwalletMenu.tsx
+      ArchiveFlow.tsx
+      // other wallet components
+```
+
+---
+
+### Summary
+
+- **Where:** ArchiveFlow is referenced inside the ewallet components—most likely in EwalletMenu (or EwalletCard) when the Archive option is clicked.
+- **How:** You conditionally render ArchiveFlow based on local state in the parent component. When the Archive option is selected, you set state (e.g., `showArchiveFlow`) to `true` and render ArchiveFlow, passing the required wallet and subscriber data.
+- **Why:** This keeps the archive process encapsulated and directly linked to the wallet it pertains to, ensuring that the modals (loading, error, confirmation, and success) are only shown when needed.
+
+This approach follows best practices for component encapsulation and ensures a smooth user experience.
