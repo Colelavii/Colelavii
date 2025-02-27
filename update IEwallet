@@ -1,0 +1,63 @@
+useWalletContext
+  //  Fetch wallets
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useGetEwallets(authState.subscriberId, page, pageSize);
+
+
+error Property 'ewallets' does not exist on type 'IEwalletResponse[]'.ts(2339)
+  const wallets = data?.ewallets;
+  const totalWallets = data?.ewallets;
+  
+  
+  the useEwallets hook
+  
+export interface IEwallet {
+  id: number | undefined;
+  accountIdentifier: string;
+  isPreferred: boolean;
+  isOwner: boolean;
+  isArchived: boolean;
+  alias: string;
+  amount: number;
+  accountStatus: string;
+  permission: string[];
+  usersOnWallet: number;
+}
+export interface IEwalletResponse {
+  total: number;
+  ewallets: IEwallet[];
+}
+
+
+
+//  Fetch eWallets
+export function useGetEwallets(
+  subscriberId: number | undefined,
+  page: number,
+  pageSize: number
+) {
+  return useQuery<IEwalletResponse[], Error>(
+    [CACHE_KEY_EWALLETS, subscriberId, page, pageSize],
+
+    async () => {
+      const response = await axios.get<IEwalletResponse[]>(variables.EWALLET, {
+        params: {
+          subscriberId: subscriberId,
+          page: page,
+          pageSize: pageSize,
+        },
+      });
+      return response.data;
+    },
+    {
+      onError: (error: any) => {
+        toast.error(`Failed to fetch ewallets: ${error.message}`);
+      },
+      enabled: Boolean(subscriberId), // only fetch when sId is provided
+    }
+  );
+}
