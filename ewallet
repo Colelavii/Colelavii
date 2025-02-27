@@ -1,0 +1,132 @@
+import React, { useEffect, useRef, useState } from "react";
+import { ToastContainer } from "react-toastify";
+import EwalletCard from "./EwalletCard";
+import styles from "./eWallet.module.css";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+import AddNewEwalletModal from "./modals/AddNewEwalletModal";
+import Pagination from "../../../../../pagination/Pagination";
+
+const Ewallet = () => {
+  const {
+    wallets,
+    isLoading,
+    error,
+    // openMenuIndex,
+    page,
+    pageSize,
+    totalWallets,
+    setPage,
+    setPageSize,
+    refetchWallets,
+    toggleMenu,
+    //closeMenu,
+  } = useWalletContext();
+
+  const handlePageChange = (newPage: number, newPageSize: number) => {
+    setPage(newPage);
+    setPageSize(newPageSize);
+    // Refetch wallet data based on new pagination values:
+    refetchWallets();
+  };
+
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(true);
+
+  //  Track when menu is open
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  //  Handle clicking outside the menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        openMenuIndex !== null &&
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpenMenuIndex(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuIndex]);
+
+  const handleKebabClick = (index: number) => {
+    console.log("kebabClicked", index);
+    //  Toggle the menu for the clicked row
+    if (openMenuIndex === index) {
+      setOpenMenuIndex(null); // Close the menu if it is already open
+    } else {
+      setOpenMenuIndex(index); // Open the menu for the selected card
+    }
+  };
+
+  const handleRadioButtonChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setIsOwner(event.target.value === "yes");
+  };
+
+  const handleOpenAddModal = () => setAddModalOpen(true);
+
+  const handleCloseAddModal = () => setAddModalOpen(false);
+
+  const renderEwalletCards = () => {
+    return wallets?.map((ewalletData, index) => (
+      <EwalletCard
+        key={ewalletData.id}
+        isOpen={openMenuIndex === index}
+        onToggleMenu={() => handleKebabClick(index)}
+        //onClose={closeMenu}
+        wallet={ewalletData}
+        // isPreferred={ewalletData?.isPreferred}
+      />
+    ));
+  };
+
+  // if (isLoading) return <p>Loading wallets...</p>;
+  // if (error) return <p>Error loading wallets: {error.message}</p>;
+  return (
+    <StandardLayout
+      header="My eWallets"
+      buttonLabel="Add New eWallet"
+      onButtonClick={handleOpenAddModal}
+    >
+      <ToastContainer />
+      {isLoading && (
+        <div className={styles["load-container"]}>
+          <span className="loader"></span>
+        </div>
+      )}
+
+      {!isLoading && totalWallets === 0 && (
+        <div className={styles["load-container"]}>
+          <p className={styles["not-available"]}>No wallet available</p>
+        </div>
+      )}
+      <div ref={containerRef} className={styles["ewallet-container"]}>
+        {renderEwalletCards()}
+      </div>
+      {/* <Pagination
+        totalItems={totalWallets}
+        initialPage={page}
+        initialItemsPerPage={pageSize}
+        onPageChange={handlePageChange}
+      /> */}
+      {isAddModalOpen && (
+        <AddNewEwalletModal
+          isOpen={isAddModalOpen}
+          onClose={handleCloseAddModal}
+          isOwner={isOwner}
+          handleRadioButtonChange={handleRadioButtonChange}
+        />
+      )}
+    </StandardLayout>
+  );
+};
+
+export default Ewallet;
