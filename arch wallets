@@ -1,3 +1,22 @@
+{
+  "total": 11,
+  "wallets": [
+    {
+      "id": "60968",
+      "accountIdentifier": "T3-C4-E8-F3-T7-C9",
+      "isPreferred": false,
+      "isOwner": true,
+      "isArchived": true,
+      "alias": "MaxxxxingITTTT",
+      "amount": 0,
+      "permission": [
+        "Administrator",
+        "User"
+      ],
+      "usersOnWallet": 1,
+      "currency": "JMD",
+      "creationDate": "2025-02-28T14:25:11.9565989"
+    },
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   CACHE_KEY_ARCHIVED_EWALLETS,
