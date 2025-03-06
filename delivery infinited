@@ -1,0 +1,51 @@
+
+import { useContext } from "react";
+import {
+  IDeliveryAddress,
+  IDeliveryAddressResponse,
+} from "../../components/interface/IDeliveryAddress";
+import APIClient from "./apiClient";
+import AuthContext from "../../state-management/contexts/authContext";
+
+const { authState } = useContext(AuthContext);
+const subscriberId = authState?.subscriberId;
+
+export const deliveryAddressApiClient = new APIClient<IDeliveryAddress>(
+  `/${subscriberId}/delivery-addresses`
+);
+
+
+import { useInfiniteQuery } from "@tanstack/react-query";
+import React from "react";
+import {
+  IDeliveryAddress,
+  IDeliveryAddressResponse,
+} from "../../../../../../interface/IDeliveryAddress";
+import { deliveryAddressApiClient } from "../../../../../../../react-query/services/deliveryAddressService";
+import { FetchResponse } from "./../../../../../../../react-query/services/apiClient";
+
+interface IAccountQuery {
+  subscriberId: number | undefined;
+  page: number;
+  pageSize: number;
+}
+const useGetDeliveryAddresses = (accountQuery: IAccountQuery) =>
+  useInfiniteQuery<FetchResponse<IDeliveryAddress>, Error>({
+    queryKey: ["deliveryAddresses", accountQuery],
+    queryFn: ({ pageParam = 1 }) =>
+      deliveryAddressApiClient.getConfig({
+        params: {
+          page: pageParam,
+          pageSize: accountQuery.pageSize,
+          subscriberId: accountQuery.subscriberId,
+        },
+      }),
+    getNextPageParam: (lastPage, allpages) => {
+      if (lastPage.count > allpages.length) {
+        return allpages.length + 1;
+      }
+      return undefined;
+    },
+  });
+
+export default useGetDeliveryAddresses;
