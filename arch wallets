@@ -1,3 +1,5 @@
+GetArchiveWalletBySubscriberId?subscriberId=54018&page=1&pageSize=3
+GetArchiveWalletBySubscriberId?subscriberId=54018&page=2&pageSize=3
 {
   "total": 11,
   "wallets": [
