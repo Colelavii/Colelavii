@@ -1,0 +1,281 @@
+import { useInfiniteQuery } from "@tanstack/react-query";
+import React, { useContext } from "react";
+import {
+  IDeliveryAddress,
+  IDeliveryAddressResponse,
+} from "../../../../../../interface/IDeliveryAddress";
+// import { deliveryAddressApiClient } from "../../../../../../../react-query/services/deliveryAddressService";
+import APIClient, {
+  FetchResponse,
+} from "./../../../../../../../react-query/services/apiClient";
+import AuthContext from "../../../../../../../state-management/contexts/authContext";
+
+interface IAccountQuery {
+  // subscriberId: number | undefined;
+  page: number;
+  pageSize: number;
+}
+const useGetDeliveryAddresses = (accountQuery: IAccountQuery) => {
+  const { authState } = useContext(AuthContext);
+  const subscriberId = authState?.subscriberId;
+
+  if (!subscriberId) {
+    throw new Error("Subscriber ID is required");
+  }
+  const deliveryAddressApiClient = new APIClient<IDeliveryAddress>(
+    `/${subscriberId}/delivery-addresses`
+  );
+  return useInfiniteQuery<FetchResponse<IDeliveryAddress>, Error>({
+    queryKey: ["deliveryAddresses", subscriberId, accountQuery],
+    queryFn: ({ pageParam = 1 }) =>
+      deliveryAddressApiClient.getConfig({
+        params: {
+          page: pageParam,
+          pageSize: accountQuery.pageSize,
+          //subscriberId: accountQuery.subscriberId,
+        },
+      }),
+    getNextPageParam: (lastPage, allpages) => {
+      if (lastPage.count > allpages.length) {
+        return allpages.length + 1;
+      }
+      return undefined;
+    },
+  });
+};
+
+export default useGetDeliveryAddresses;
+
+import { useContext, useState } from "react";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+import { ToastContainer, toast } from "react-toastify";
+import Button from "../../../../../button/Button";
+import Tile from "../../../../../tile/Tile";
+import ArrowContainer from "../../../../../arrowcontainer/ArrowContainer";
+import ArrowContainerStyles from "../../../../../arrowcontainer/ArrowContainer.module.css";
+import styles from "./DeliveryAddresses.module.css";
+import { IDeliveryAddress } from "../../../../../interface/IDeliveryAddress";
+import DeleteModal from "../../../../../modals/deleteModals/DeleteModal";
+import UpdateDeliveryAddressModal from "../../../../../modals/updateModals/UpdateDeliveryAddressModal";
+import AddDeliveryAddressModal from "../../../../../modals/addModals/AddDeliveryAddressModal";
+import IndicatorCircles from "../../../../../indicatorcircles/IndicatorCircles";
+import {
+  useDeleteDeliveryAddress,
+  // useFetchDeliveryAddresses,
+} from "../../../../../../react-query/services/hooks/useDelivery";
+import { useFetchProfileDetails } from "../../../../../../hooks/useProfile";
+import useGetDeliveryAddresses from "./hooks/useGetDeliveryAddresses";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import React from "react";
+
+const Delivery = () => {
+  const pageSize = 2;
+  const [page, setPage] = useState(1);
+  const [selectedTile, setSelectedTile] = useState<IDeliveryAddress>();
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [formError, setFormError] = useState<string | undefined>(undefined);
+
+  const { authState } = useContext(AuthContext);
+  const subscriberId = authState?.subscriberId;
+
+  const {
+    data: deliveryData,
+    isLoading: isDeliveryAddressLoading,
+    refetch,
+    isRefetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useGetDeliveryAddresses({ page, pageSize });
+
+  const { mutate: deleteAddress, isLoading: isRemoving } =
+    useDeleteDeliveryAddress();
+
+  const totalAddresses = deliveryData?.pages.length || 0;
+  const totalPages = Math.ceil(totalAddresses / pageSize);
+
+  const handleOpenAddModal = () => setAddModalOpen(true);
+  const handleCloseAddModal = () => setAddModalOpen(false);
+
+  const handleOpenUpdateModal = (data: IDeliveryAddress) => {
+    setSelectedTile(data);
+    setUpdateModalOpen(true);
+  };
+
+  const handleCloseUpdateModal = () => {
+    setSelectedTile(undefined);
+    setUpdateModalOpen(false);
+  };
+
+  const handleOpenDeleteModal = (data: IDeliveryAddress) => {
+    setSelectedTile(data);
+    setDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setSelectedTile(undefined);
+    setFormError(undefined); // Clear any previous errors
+  };
+
+  const refreshList = async () => {
+    await refetch();
+    console.log("delivery refetch works");
+  };
+
+  const handleAddSuccess = () => handleCloseAddModal();
+
+  const handleUpdateSuccess = () => handleCloseUpdateModal();
+
+  const handleDeleteAddress = () => {
+    setFormError(undefined); // Clear any previous errors
+
+    if (selectedTile && subscriberId) {
+      deleteAddress(
+        {
+          subscriberId: subscriberId,
+          addressId: selectedTile.addressId,
+        },
+        {
+          onSuccess: () => {
+            // refreshList();
+            handleCloseDeleteModal();
+          },
+          onError: (error: any) => {
+            setFormError(error.message);
+          },
+        }
+      );
+    }
+  };
+
+  const nextSlide = () => {
+    if (page < totalPages) setPage(page + 1);
+  };
+
+  const prevSlide = () => {
+    if (page > 1) setPage(page - 1);
+  };
+  // Handle circle click to change the page
+  const handleCircleClick = (index: number) => {
+    setPage(index + 1);
+  };
+  const renderDeliveryAddresses = () => {
+    return deliveryData?.pages.map((page, pageIndex) => (
+      <React.Fragment key={pageIndex}>
+        {page.results?.map((addr, index) => (
+          <Tile
+            onUpdateClick={() => handleOpenUpdateModal(addr)}
+            onDeleteClick={() => handleOpenDeleteModal(addr)}
+            key={index}
+          >
+            <li>
+              <p>
+                {addr.thoroughfareNumber} {addr.thoroughfareName}
+              </p>
+              <p>{addr.nearestTown}</p>
+              <p>{addr.postOffice}</p>
+              <p>{addr.parish}</p>
+              <p>{addr.postalCodeStr}</p>
+              <p>{addr.country}</p>
+            </li>
+          </Tile>
+        ))}
+      </React.Fragment>
+    ));
+  };
+
+  return (
+    <>
+      <ToastContainer />
+      <>
+        {deliveryData?.pages.map((page, pageIndex) => (
+          <React.Fragment key={pageIndex}>
+            {page.results?.map((addr: IDeliveryAddress) => (
+              <Tile
+                onUpdateClick={() => handleOpenUpdateModal(addr)}
+                onDeleteClick={() => handleOpenDeleteModal(addr)}
+                key={addr.addressId}
+              >
+                <li>
+                  <p>
+                    {addr.thoroughfareNumber} {addr.thoroughfareName}
+                  </p>
+                  <p>{addr.nearestTown}</p>
+                  <p>{addr.postOffice}</p>
+                  <p>{addr.parish}</p>
+                  <p>{addr.postalCodeStr}</p>
+                  <p>{addr.country}</p>
+                </li>
+              </Tile>
+            ))}
+          </React.Fragment>
+        ))}
+      </>
+      <ArrowContainer>
+        <IoIosArrowBack
+          className={`arrow ${page === 1 ? "disabled" : ""}`}
+          onClick={prevSlide}
+        />
+        <div className={ArrowContainerStyles["tile-container"]}>
+          {(isRefetching || isDeliveryAddressLoading) && (
+            <span className="loader"></span>
+          )}
+          {!isDeliveryAddressLoading &&
+            (deliveryData?.pages.length ?? 0) === 0 && (
+              <p className="no-applications-message">No address available.</p>
+            )}
+          {/* {renderDeliveryAddresses()} */}
+        </div>
+        <IoIosArrowForward
+          onClick={nextSlide}
+          className={`arrow ${page === totalPages ? "disabled" : ""}`}
+        />
+      </ArrowContainer>
+      {/* Indicator Circles Component */}
+      <IndicatorCircles
+        total={totalPages}
+        currentIndex={page - 1}
+        onCircleClick={handleCircleClick}
+      />
+      {hasNextPage && (
+        <Button
+          variant="primary"
+          disabled={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        >
+          {isFetchingNextPage ? "Loading..." : "Load More"}
+        </Button>
+      )}
+      <div className={styles.addAddressContainer}>
+        <Button variant="secondary" onClick={handleOpenAddModal}>
+          Add Address
+        </Button>
+      </div>
+      <AddDeliveryAddressModal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseAddModal}
+        onAdd={handleAddSuccess}
+      />
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        isLoading={isRemoving}
+        onClose={handleCloseDeleteModal}
+        onDelete={handleDeleteAddress}
+        error={formError}
+      />
+      {isUpdateModalOpen && selectedTile && (
+        <UpdateDeliveryAddressModal
+          isOpen={isUpdateModalOpen}
+          onClose={handleCloseUpdateModal}
+          tile={selectedTile}
+          onUpdateSuccess={handleUpdateSuccess}
+        />
+      )}
+    </>
+  );
+};
+
+export default Delivery;
