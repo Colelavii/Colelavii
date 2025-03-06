@@ -1,0 +1,150 @@
+import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  CACHE_KEY_ARCHIVED_EWALLETS,
+  variables,
+} from "../../../../../../../Variables";
+import axios from "axios";
+import { IEwalletResponse } from "../../../../../../../hooks/useEwallets";
+
+// Fetch Archived Wallets
+const useGetArchivedWallets = (sId: number | undefined, pageSize: number) =>
+  useInfiniteQuery<IEwalletResponse, Error>({
+    queryKey: [CACHE_KEY_ARCHIVED_EWALLETS, sId, pageSize],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await axios.get<IEwalletResponse>(
+        variables.ARCHIVED_WALLETS,
+        {
+          params: {
+            subscriberId: sId,
+            page: pageParam,
+            pageSize: pageSize,
+          },
+        }
+      );
+      return response.data;
+    },
+
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.wallets.length < pageSize
+        ? undefined
+        : allPages.length + 1;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+export default useGetArchivedWallets;
+
+
+import { useContext, useEffect, useRef, useState } from "react";
+import AuthContext from "../../../../../../../state-management/contexts/authContext";
+import EwalletCard from "../EwalletCard";
+import { useWalletContext } from "../../../../../../../state-management/contexts/walletContext";
+import StandardLayout from "../../../../../../standardlayout/StandardLayout";
+import { ToastContainer } from "react-toastify";
+import styles from "./../eWallet.module.css";
+import CautionBanner from "../components/cautionBanner/CautionBanner";
+import Loader from "../../../../../../modals/loadingModal/Loader";
+import useGetArchivedWallets from "../hooks/useGetArchivedWallets";
+import React from "react";
+import Button from "../../../../../../button/Button";
+
+const ArchivedEwallet = () => {
+  const page = 1;
+  const pageSize = 3;
+  const { authState } = useContext(AuthContext);
+
+  const {
+    data: archivedWallets,
+    isLoading,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useGetArchivedWallets(authState.subscriberId, pageSize);
+
+  // const { openMenuIndex, toggleMenu } = useWalletContext();
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  //  Handle clicking outside the menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        openMenuIndex !== null &&
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpenMenuIndex(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuIndex]);
+
+  const handleKebabClick = (index: number) => {
+    console.log("kebabClicked", index);
+    //  Toggle the menu for the clicked row
+    if (openMenuIndex === index) {
+      setOpenMenuIndex(null); // Close the menu if it is already open
+    } else {
+      setOpenMenuIndex(index); // Open the menu for the selected card
+    }
+  };
+  const renderEwalletCards = () => {
+    return archivedWallets?.pages.map((page, index) => (
+      <React.Fragment key={index}>
+        {page.wallets.map((ewalletData) => (
+          <EwalletCard
+            key={ewalletData.id}
+            isOpen={openMenuIndex === index}
+            onToggleMenu={() => handleKebabClick(index)}
+            //onClose={closeMenu}
+            wallet={ewalletData}
+          />
+        ))}
+      </React.Fragment>
+    ));
+  };
+
+  //  if (isLoading) return <p>Loading wallets...</p>;
+  if (error) return <p>Error loading wallets: {error.message}</p>;
+  return (
+    <StandardLayout header="My Archived eWallets">
+      <CautionBanner message="Caution: Wallets archived for more than 30 days will be permanently deleted." />
+
+      <ToastContainer />
+      {isLoading && (
+        // <div className={styles["load-container"]}>
+        //   <span className="loader"></span>
+        // </div>
+        <Loader />
+      )}
+
+      {/* {!isLoading && (archivedWallets?.pagestotal ?? 0) === 0 && (
+        <div className={styles["load-container"]}>
+          <p className={styles["no-applications-message"]}>
+            No wallet available
+          </p>
+        </div>
+      )}
+      <>{archivedWallets?.total} results</> */}
+      <div ref={containerRef} className={styles["ewallet-container"]}>
+        {renderEwalletCards()}
+      </div>
+      {hasNextPage && (
+        <Button
+          variant="primary"
+          disabled={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        >
+          {isFetchingNextPage ? "Loading..." : "Load More"}
+        </Button>
+      )}
+    </StandardLayout>
+  );
+};
+
+export default ArchivedEwallet;
