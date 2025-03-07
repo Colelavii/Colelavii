@@ -1,31 +1,3 @@
-{pages: Array(1), pageParams: Array(1)}
-pageParams
-: 
-[undefined]
-pages
-: 
-Array(1)
-0
-: 
-formAddresses
-: 
-Array(2)
-0
-: 
-{street: '76 February', addressLines: Array(5), postOffice: 'Comma Pen P.A.', poBox: '', state: '', …}
-1
-: 
-{street: '1146 RemoveRefresh1', addressLines: Array(5), postOffice: 'Bakers Hill P.A.', poBox: '', state: '', …}
-length
-: 
-2
-[[Prototype]]
-: 
-Array(0)
-total
-: 
-4
-
 import { useInfiniteQuery } from "@tanstack/react-query";
 import React, { useContext } from "react";
 import {
@@ -50,10 +22,10 @@ const useGetDeliveryAddresses = (accountQuery: IAccountQuery) => {
   if (!subscriberId) {
     throw new Error("Subscriber ID is required");
   }
-  const deliveryAddressApiClient = new APIClient<IDeliveryAddress>(
+  const deliveryAddressApiClient = new APIClient<IDeliveryAddressResponse>(
     `/${subscriberId}/delivery-addresses`
   );
-  return useInfiniteQuery<FetchResponse<IDeliveryAddress>, Error>({
+  return useInfiniteQuery<IDeliveryAddressResponse, Error>({
     queryKey: ["deliveryAddresses", subscriberId, accountQuery],
     queryFn: ({ pageParam = 1 }) =>
       deliveryAddressApiClient.getConfig({
@@ -64,16 +36,19 @@ const useGetDeliveryAddresses = (accountQuery: IAccountQuery) => {
         },
       }),
     getNextPageParam: (lastPage, allpages) => {
-      if (lastPage.count > allpages.length) {
-        return allpages.length + 1;
-      }
-      return undefined;
+      const totalFetchedWallets = allpages.reduce(
+        (acc, page) => acc + (page.total || 0),
+        0
+      );
+
+      return totalFetchedWallets < lastPage.total
+        ? allpages.length + 1
+        : undefined;
     },
   });
 };
 
 export default useGetDeliveryAddresses;
-
 import { useContext, useState } from "react";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { ToastContainer, toast } from "react-toastify";
@@ -191,9 +166,10 @@ const Delivery = () => {
     setPage(index + 1);
   };
   const renderDeliveryAddresses = () => {
-    return deliveryData?.pages.map((page, pageIndex) => (
+    console.log("deliveryData", deliveryData);
+    return deliveryData?.pages?.map((page, pageIndex) => (
       <React.Fragment key={pageIndex}>
-        {page.results?.map((addr, index) => (
+        {page.formAddresses?.map((addr, index) => (
           <Tile
             onUpdateClick={() => handleOpenUpdateModal(addr)}
             onDeleteClick={() => handleOpenDeleteModal(addr)}
@@ -221,7 +197,7 @@ const Delivery = () => {
       <>
         {deliveryData?.pages.map((page, pageIndex) => (
           <React.Fragment key={pageIndex}>
-            {page.results?.map((addr: IDeliveryAddress) => (
+            {page.formAddresses.map((addr: IDeliveryAddress) => (
               <Tile
                 onUpdateClick={() => handleOpenUpdateModal(addr)}
                 onDeleteClick={() => handleOpenDeleteModal(addr)}
