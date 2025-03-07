@@ -1,3 +1,31 @@
+{pages: Array(1), pageParams: Array(1)}
+pageParams
+: 
+[undefined]
+pages
+: 
+Array(1)
+0
+: 
+formAddresses
+: 
+Array(2)
+0
+: 
+{street: '76 February', addressLines: Array(5), postOffice: 'Comma Pen P.A.', poBox: '', state: '', …}
+1
+: 
+{street: '1146 RemoveRefresh1', addressLines: Array(5), postOffice: 'Bakers Hill P.A.', poBox: '', state: '', …}
+length
+: 
+2
+[[Prototype]]
+: 
+Array(0)
+total
+: 
+4
+
 import { useInfiniteQuery } from "@tanstack/react-query";
 import React, { useContext } from "react";
 import {
