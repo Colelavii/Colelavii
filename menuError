@@ -1,3 +1,7 @@
+chunk-HOONJUPS.js?v=7b2ce1f9:19409 Uncaught Error: useNavigate() may be used only in the context of a <Router> component.
+    at AddtoCartModal (AddtoCartModal.tsx:16:20)
+
+
 modalContext.tsx:32 Warning: React has detected a change in the order of Hooks called by EwalletMenu. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
 
    Previous render            Next render
