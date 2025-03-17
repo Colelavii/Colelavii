@@ -1,0 +1,696 @@
+import { useEffect, useState } from "react";
+import Modal, { ModalProps } from "../Modal";
+import { useWalletContext } from "../../../state-management/contexts/walletContext";
+import ModalBody from "../ModalBody";
+import ModalHeader from "../ModalHeader";
+import styles from "../addSubscription/AddSubscriptionModal.module.css";
+import ModalFooter from "../ModalFooter";
+import Button from "../../button/Button";
+import { useCartContext } from "../../../state-management/contexts/cartContext";
+import {
+  ModalType,
+  useModal,
+} from "../../../state-management/contexts/modalContext";
+
+const subscriptionOptions = [
+  {
+    months: 3,
+    amount: 250,
+    description: "Activation of 3-month subscription on wallet",
+  },
+  {
+    months: 6,
+    amount: 500,
+    description: "Activation of 6-month subscription on wallet",
+  },
+  {
+    months: 9,
+    amount: 750,
+    description: "Activation of 9-month subscription on wallet",
+  },
+  {
+    months: 12,
+    amount: 1000,
+    description: "Activation of 12-month subscription on wallet",
+  },
+];
+const AddSubscriptionModal = ({ isOpen, onClose }: ModalProps) => {
+  const { modalData, openModal, closeModal } = useModal();
+  const { selectedWallet, performWalletAction } = useWalletContext();
+  const { incrementCartTotal } = useCartContext();
+  const [selectedOption, setSelectedOption] = useState(subscriptionOptions[0]);
+
+  const handleSelect = (option: (typeof subscriptionOptions)[0]) => {
+    setSelectedOption(option);
+  };
+  useEffect(() => {
+    console.log("AddSubscriptionModal Rendered");
+  }, []);
+  const handleSubmit = () => {
+    if (selectedOption.amount && selectedWallet) {
+      console.log("Adding subscription to cart", selectedOption);
+      performWalletAction({
+        name: "Subscription",
+        accountIdentifier: selectedWallet.accountIdentifier,
+        amount: selectedOption.amount,
+        description: selectedOption.description,
+      });
+      incrementCartTotal(selectedOption.amount);
+      openModal(ModalType.ADD_TO_CART);
+
+      // setTimeout(() => {
+      //   console.log("Triggering add to cart Modal");
+      //   openModal(ModalType.ADD_TO_CART);
+      // }, 200);
+      closeModal();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen}>
+      <ModalHeader children="Add Subscription" onClose={onClose} />
+
+      <ModalBody align="left">
+        <p className={styles.text}>
+          Please select your desired subscription period.
+        </p>
+        <div className={styles.subscriptionOptionsContainer}>
+          {subscriptionOptions.map((option, index) => (
+            <div
+              key={index}
+              className={`${styles.option} ${
+                selectedOption === option ? styles.selected : ""
+              }`}
+              onClick={() => handleSelect(option)}
+            >
+              <span className={styles.text}>{option.months} months</span>
+              <span className={styles.subscriptionAmount}>
+                $ {option.amount}
+              </span>
+            </div>
+          ))}
+        </div>
+      </ModalBody>
+      <ModalFooter align="right">
+        <Button variant="cancel-secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="secondary" onClick={handleSubmit}>
+          Add to Cart
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default AddSubscriptionModal;
+import Button from "../../button/Button";
+import AddtoCart from "../../../assets/AddtoCart.svg";
+import Modal, { ModalProps } from "../Modal";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import { useNavigate } from "react-router-dom";
+import { useCartContext } from "../../../state-management/contexts/cartContext";
+import { useModal } from "../../../state-management/contexts/modalContext";
+
+const AddtoCartModal = ({ isOpen, onClose }: ModalProps) => {
+  const { closeModal } = useModal();
+  const { items, cartTotal } = useCartContext();
+  const navigate = useNavigate();
+
+  const handleProceed = () => {
+    closeModal();
+    navigate("/eservice/Cart");
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalBody
+        align="center"
+        imageUrl={AddtoCart}
+        bodyTitle="Successfully added to cart!"
+      >
+        <p>
+          Cart subtotal ({items.length} items): <b>${cartTotal}</b>
+        </p>{" "}
+      </ModalBody>
+      <ModalFooter align="center">
+        <Button variant="cancel-success" onClick={onClose}>
+          Close
+        </Button>
+        <Button variant="success" onClick={handleProceed}>
+          Proceed to cart
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default AddtoCartModal;
+import React, { useContext, useState } from "react";
+import ModalBody from "../../../../../modals/ModalBody";
+import EwalletStyles from "./eWallet.module.css";
+import { ModalProps } from "../../../../../modals/Modal";
+import { IEwallet } from "../../../../../../hooks/useEwallets";
+import { useWalletContext } from "../../../../../../state-management/contexts/walletContext";
+import ArchiveFlow from "./ArchiveFlow";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import {
+  useModal,
+  ModalType,
+} from "../../../../../../state-management/contexts/modalContext";
+import axios from "axios";
+import { variables } from "../../../../../../Variables";
+
+interface EwalletMenuProps extends ModalProps {
+  wallet: IEwallet | undefined;
+}
+const EwalletMenu: React.FC<EwalletMenuProps> = ({
+  wallet,
+  isOpen,
+  onClose,
+}) => {
+  const {
+    openTopUpModal,
+    // openAliasModal,
+    openPreferredModal,
+    openArchiveModal,
+    openUnArchiveModal,
+    //handleAddSubscriptionClick,
+  } = useWalletContext();
+  const isAdministrator = wallet?.permission.includes("Administrator");
+
+  if (!isOpen) return null;
+  const { openModal } = useModal();
+  const { authState } = useContext(AuthContext);
+
+  const [showArchiveFlow, setShowArchiveFlow] = useState(false);
+  // const handleArchiveClick = () => {
+  //   setShowArchiveFlow(true);
+  // };
+
+  // const handleCloseArchiveModal = () => {
+  //   setIsArchiveModalOpen(false);
+  // };
+
+  const handleAliasClick = () => {
+    openModal(ModalType.EDIT_WALLET_ALIAS, wallet);
+  };
+  const handlePreferredClick = () => {
+    openPreferredModal(wallet!);
+  };
+
+  const handleArchiveClick = () => {
+    // console.log("Archive clicked");
+    // setShowArchiveFlow(true);
+    openArchiveModal(wallet!);
+  };
+
+  const handleUnArchiveClick = () => {
+    openUnArchiveModal(wallet!);
+    console.log("Unarchive clicked");
+  };
+
+  const handleSubscriptionClick = async () => {
+    try {
+      const response = await axios.get(
+        `${variables.SUBSCRIPTION_STATUS}${wallet?.id}`
+      );
+      const activeSubscription = response.data.activeSubscription;
+
+      if (activeSubscription > 0) {
+        console.log("has subscription");
+        openModal(ModalType.CAUTION); // Display caution modal
+      } else {
+        console.log("does not have subscription");
+        openModal(ModalType.ADD_SUBSCRIPTION); // Proceed to add subscription
+      }
+    } catch (error) {
+      console.error("Error fetching subscription status", error);
+      openModal(ModalType.ERROR, null, "Error fetching subscription status");
+    }
+  };
+
+  const handleTopUpClick = () => {
+    openTopUpModal();
+  };
+
+  return (
+    <>
+      <ModalBody
+        className={EwalletStyles["ewallet-dropdown-content"]}
+        isOpen={isOpen}
+      >
+        <ul onClick={onClose}>
+          {isAdministrator ? (
+            wallet?.isArchived ? ( // If wallet is archived
+              <li onClick={handleUnArchiveClick}>Unarchive</li>
+            ) : (
+              <>
+                <li onClick={handleAliasClick}>Edit name</li>
+                <li onClick={handleSubscriptionClick}>Add subscription</li>
+                <li onClick={handleTopUpClick}>Top-up wallet</li>
+                <li onClick={handleArchiveClick}>
+                  {wallet?.isOwner ? "Archive" : null}
+                </li>
+                <li onClick={() => handlePreferredClick()}>
+                  {wallet?.isPreferred ? null : "Set as preferred"}
+                </li>
+              </>
+            ) // If wallet is not archived and is not preferred
+          ) : (
+            // If user is not an administrator
+            <li onClick={() => handlePreferredClick()}>
+              {wallet?.isPreferred ? null : "Set as preferred"}
+            </li>
+          )}
+        </ul>
+      </ModalBody>
+      {/* {showArchiveFlow && (
+        <ArchiveFlow
+          walletId={wallet?.id}
+          subscriberId={authState.subscriberId}
+          onClose={() => setShowArchiveFlow(false)}
+        />
+      )} */}
+    </>
+  );
+};
+
+export default EwalletMenu;
+import { createContext, ReactNode, useContext, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { IEwallet, useGetEwallets } from "../../hooks/useEwallets";
+import AuthContext from "./authContext";
+import axios from "axios";
+import {
+  CACHE_KEY_ARCHIVED_EWALLETS,
+  CACHE_KEY_EWALLETS,
+  variables,
+} from "../../Variables";
+import { CartItem, useCartContext } from "./cartContext";
+import { ModalProps } from "../../components/modals/Modal";
+import { useModal, ModalType } from "./modalContext";
+
+interface WalletContextType {
+  wallets: IEwallet[] | undefined;
+  handleLoadMore: () => void;
+  fetchNextPage: () => void;
+  hasNextPage: boolean | undefined;
+  isFetchingNextPage: boolean | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  selectedWallet: IEwallet | undefined;
+  isPreferredModalOpen: boolean;
+  isAliasModalOpen: boolean;
+  isAddSubscriptionModalOpen: boolean;
+  isCautionModalOpen: boolean;
+  isAddToCartModalOpen: boolean;
+  isTopUpModalOpen: boolean;
+  isArchiveModalOpen: boolean;
+  isUnArchiveModalOpen: boolean;
+  openMenuIndex: number | null;
+  page: number;
+  pageSize: number;
+  totalWallets: number | undefined;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
+  refetchWallets: () => void;
+  toggleMenu: (index: number | null) => void;
+  closeMenu: () => void;
+  closeAddToCart: () => void;
+  closeCautionModal: () => void;
+  closeAddSubscriptionModalOpen: () => void;
+  setAddSubscriptionModalOpen: (set: boolean) => void;
+  setAddToCartModalOpen: (set: boolean) => void;
+  setSelectedWallet: (wallet: IEwallet | undefined) => void;
+  performWalletAction: (action: Omit<CartItem, "id">) => void;
+  openPreferredModal: (wallet: IEwallet | undefined) => void;
+  setPreferredWallet: (preferredAccount: string | undefined) => void;
+
+  unArchiveWallet: (
+    subscriberId: number | undefined,
+    walletId: number | undefined
+  ) => void;
+  openArchiveModal: (wallet: IEwallet | undefined) => void;
+  openUnArchiveModal: (wallet: IEwallet | undefined) => void;
+  // openAliasModal: (wallet: IEwallet | undefined) => void;
+  openTopUpModal: () => void;
+  closeModals: () => void;
+  //handleAddSubscriptionClick: () => void;
+  setAliasModalOpen: (set: boolean) => void;
+  setArchiveModalOpen: (isOpen: boolean) => void;
+  setPreferredAccountLoading: boolean;
+  unArchiveWalletLoading: boolean;
+  formError: string[] | undefined;
+  setFormError: (formError: string[] | undefined) => void;
+}
+
+// Check if wallet can be archived - should be in types.ts
+export interface ArchiveCheckResponse {
+  canArchive: boolean; //  will be present if validation passes
+  message: string; //  will be present when validation fails
+  errors?: string[] | undefined; //  will be present when validation fails
+}
+export interface ArchiveWallet extends ModalProps {
+  subscriberId: number | undefined;
+  walletId: number | undefined;
+}
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
+
+export const useWalletContext = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error(
+      "useWalletContext must be used within a WalletContextProvider"
+    );
+  }
+  return context;
+};
+
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const queryClient = useQueryClient();
+  const [selectedWallet, setSelectedWallet] = useState<IEwallet | undefined>(
+    undefined
+  );
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
+  // const [activeSubscription, setActiveSubscription] = useState<number | null>(
+  //   null
+  // );
+
+  const [formError, setFormError] = useState<string[] | undefined>([]);
+
+  const [isAddToCartModalOpen, setAddToCartModalOpen] = useState(false);
+  const [isAddSubscriptionModalOpen, setAddSubscriptionModalOpen] =
+    useState(false);
+  const [isTopUpModalOpen, setTopUpModalOpen] = useState(false);
+  const [isAliasModalOpen, setAliasModalOpen] = useState(false);
+  const [isPreferredModalOpen, setPreferredModalOpen] = useState(false);
+  const [isArchiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [isUnArchiveModalOpen, setUnArchiveModalOpen] = useState(false);
+  const [isCautionModalOpen, setCautionModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(4);
+
+  const handleLoadMore = () => {
+    //fetchNextPage();
+    setPageSize((prev) => prev + 2);
+  };
+  const { authState } = useContext(AuthContext);
+
+  //  Fetch wallets
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useGetEwallets(authState.subscriberId, pageSize);
+  const { openModal, closeModal } = useModal();
+
+  const wallets = data?.pages.flatMap((page) => page.wallets) || [];
+  const totalWallets = data?.pages[0].total || 0;
+
+  const refetchWallets = () => {
+    refetch();
+  };
+
+  const cartContext = useCartContext();
+
+  const performWalletAction = (action: Omit<CartItem, "id">) => {
+    console.log("Perfoming wallet action:", action);
+    cartContext.addItem(action); // Calls CartContext's addItem
+  };
+
+  const toggleMenu = (index: number | null) => {
+    setOpenMenuIndex((prev) => (prev === index ? null : index));
+  };
+
+  const closeMenu = () => {
+    setOpenMenuIndex(null);
+  };
+
+  const closeAddSubscriptionModalOpen = () => {
+    setAddSubscriptionModalOpen(false);
+  };
+
+  const closeCautionModal = () => {
+    setCautionModalOpen(false);
+  };
+
+  const closeAddToCart = () => {
+    setAddToCartModalOpen(false);
+  };
+  // const fetchActiveSubscription = async (walletId: number | undefined) => {
+  //   try {
+  //     const response = await axios.get(
+  //       `${variables.SUBSCRIPTION_STATUS}${walletId}`
+  //     );
+  //     setActiveSubscription(response.data.activeSubscription);
+  //     return response.data.activeSubscription;
+  //   } catch (error) {
+  //     console.error("Failed to fetch subscription status", error);
+  //     setActiveSubscription(null);
+  //   }
+  // };
+
+  // const handleAddSubscriptionClick = async () => {
+  //   console.log(selectedWallet);
+
+  //   if (selectedWallet) {
+  //     const subscription = await fetchActiveSubscription(selectedWallet.id);
+  //     if (subscription > 0) {
+  //       console.log("has subscription");
+  //       setCautionModalOpen(true); // Display caution modal
+  //     } else {
+  //       setAddSubscriptionModalOpen(true); // Proceed to add subscription
+  //       console.log("does not have subscription");
+  //     }
+  //   }
+  // };
+  const openPreferredModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setPreferredModalOpen(true);
+  };
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setPreferredModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = ["An error occurred"];
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount);
+  };
+
+  // Mutation to Unarchive wallet
+  const unArchiveWalletMutation = useMutation(
+    ({ subscriberId, walletId }: ArchiveWallet) =>
+      axios.post(`${variables.UNARCHIVE_WALLET}`, {
+        subscriberId: subscriberId,
+        walletId: walletId,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_ARCHIVED_EWALLETS]);
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setUnArchiveModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = ["An error occurred"];
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const unArchiveWallet = (
+    subscriberId: number | undefined,
+    walletId: number | undefined
+  ) => {
+    unArchiveWalletMutation.mutate({ subscriberId, walletId });
+  };
+  const openArchiveModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+
+    setArchiveModalOpen(true);
+  };
+
+  const openUnArchiveModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setUnArchiveModalOpen(true);
+  };
+
+  const openTopUpModal = () => {
+    setTopUpModalOpen(true);
+  };
+  // const openAliasModal = (wallet: IEwallet | undefined) => {
+  //   setSelectedWallet(wallet);
+  //   // openModal(ModalType.EDIT_WALLET_ALIAS);
+  //   setAliasModalOpen(true);
+  // };
+
+  const closeModals = () => {
+    setArchiveModalOpen(false);
+    setUnArchiveModalOpen(false);
+    setTopUpModalOpen(false);
+    setAliasModalOpen(false);
+    setPreferredModalOpen(false);
+    setSelectedWallet(undefined);
+    setFormError(undefined);
+    setCautionModalOpen(false);
+    setAddSubscriptionModalOpen(false);
+    setAddToCartModalOpen(false);
+  };
+
+  const value = {
+    wallets,
+    isLoading,
+    error,
+    openMenuIndex,
+    selectedWallet,
+    isPreferredModalOpen,
+    isAliasModalOpen,
+    isAddSubscriptionModalOpen,
+    isCautionModalOpen,
+    isAddToCartModalOpen,
+    isTopUpModalOpen,
+    isArchiveModalOpen,
+    isUnArchiveModalOpen,
+    toggleMenu,
+    closeMenu,
+    closeAddToCart,
+    closeAddSubscriptionModalOpen,
+    closeCautionModal,
+    setSelectedWallet,
+    performWalletAction,
+    openPreferredModal,
+    setAddToCartModalOpen,
+    setAddSubscriptionModalOpen,
+    setPreferredWallet,
+    setAliasModalOpen,
+    openArchiveModal,
+    openUnArchiveModal,
+    unArchiveWallet,
+    openTopUpModal,
+    //openAliasModal,
+    closeModals,
+    // handleAddSubscriptionClick,
+    page,
+    pageSize,
+    totalWallets,
+    setPage,
+    setPageSize,
+    refetchWallets,
+    setArchiveModalOpen,
+    setPreferredAccountLoading: setPreferredWalletMutation.isLoading,
+    unArchiveWalletLoading: unArchiveWalletMutation.isLoading,
+    formError,
+    setFormError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    handleLoadMore,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
+  );
+};
+
+export { WalletContext };
+import React from "react";
+import { useModal, ModalType } from "../state-management/contexts/modalContext";
+import { SuccessModal } from "./modals/success/SuccessModal";
+import ErrorModal from "./modals/errorModal/ErrorModal";
+import AddNewEwalletModal from "./eservice/eservsidebar/toolssidebar/settings/ewallet/modals/AddNewEwalletModal";
+import EditEwalletAliasModal from "./modals/updateModals/EditEwalletAliasModal";
+import AddSubscriptionModal from "./modals/addSubscription/AddSubscriptionModal";
+import AddtoCartModal from "./modals/addtocart/AddtoCartModal";
+import CautionModal from "./modals/caution/CautionModal";
+
+const ModalManager: React.FC = () => {
+  const { modalType, modalData, modalMessage, closeModal } = useModal();
+  console.log("ModalManager Rendered: ");
+  console.log("ModalManager State: ", { modalType, modalData, modalMessage });
+  return (
+    <>
+      {modalType === ModalType.SUCCESS && (
+        <SuccessModal
+          isOpen={true}
+          message={modalMessage}
+          onClose={closeModal}
+        />
+      )}
+      {modalType === ModalType.CAUTION && (
+        <CautionModal
+          isOpen={true}
+          //   message={modalMessage}
+          onClose={closeModal}
+        />
+      )}
+      {modalType === ModalType.ERROR && (
+        <ErrorModal isOpen={true} errors={modalMessage} onClose={closeModal} />
+      )}
+      {modalType === ModalType.ADD_WALLET && (
+        <AddNewEwalletModal
+          isOpen={true}
+          onClose={closeModal}
+          isOwner={true}
+          handleRadioButtonChange={() => {}}
+        />
+      )}
+      {modalType === ModalType.EDIT_WALLET_ALIAS && (
+        <EditEwalletAliasModal isOpen={true} onClose={closeModal} />
+      )}
+      {modalType === ModalType.ADD_SUBSCRIPTION && (
+        <AddSubscriptionModal isOpen={true} onClose={closeModal} />
+      )}
+      {modalType === ModalType.ADD_TO_CART && (
+        <AddtoCartModal isOpen={true} onClose={closeModal} />
+      )}
+    </>
+  );
+};
+
+export default ModalManager;
