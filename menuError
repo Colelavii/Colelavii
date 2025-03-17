@@ -1,0 +1,26 @@
+modalContext.tsx:32 Warning: React has detected a change in the order of Hooks called by EwalletMenu. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+1. useContext                 useContext
+2. undefined                  useContext
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ Error Component Stack
+    at EwalletMenu (EwalletMenu.tsx:20:3)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at EwalletCard (EwalletCard.tsx:26:3)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at StandardLayout (StandardLayout.tsx:17:3)
+    at Ewallet (Ewallet.tsx:25:7)
+    at PageLayout (PageLayout.tsx:11:3)
+    at SettingsLayout (SettingsLayout.tsx:58:25)
+    at EserviceLayout (EserviceLayout.tsx:9:23)
+    at WalletProvider (walletContext.tsx:92:3)
+    at CartProvider (cartContext.tsx:39:3)
+    at div (<anonymous>)
+    at App (App.tsx:65:37)
+    at ModalProvider (modalContext.tsx:40:3)
