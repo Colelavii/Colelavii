@@ -1,0 +1,677 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import App from "./App";
+import "./index.css";
+import { ModalProvider } from "./state-management/contexts/modalContext";
+import ModalManager from "./components/ModalManager";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      // cacheTime: 300_000, //5m garbage collection for inactive queries
+      // staleTime: 10 * 1000, //10s
+      refetchOnWindowFocus: false, //default true when you open a new tab and go back on the page
+      refetchOnReconnect: false, //when the user loses connection and reconnects default true
+      // refetchOnMount: true, //queries should be fetched when the component mounts for the first time
+    },
+  },
+});
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <ModalProvider>
+        <App />
+        <ModalManager />
+      </ModalProvider>
+      <ReactQueryDevtools />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+import React, { useReducer } from "react";
+import {
+  createBrowserRouter,
+  Route,
+  createRoutesFromElements,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
+import Dashboard from "./components/eservice/eservsidebar/toolssidebar/dashboard/Dashboard";
+import Applications from "./components/eservice/eservsidebar/toolssidebar/applications/Applications";
+import EserviceLayout from "./container/eservice/eserviceLayout/EserviceLayout";
+import SettingsLayout from "./container/settingsLayout/SettingsLayout";
+import Settings from "./components/eservice/eservsidebar/toolssidebar/settings/Settings";
+import Profile from "./components/eservice/eservsidebar/toolssidebar/settings/profile/Profile";
+import Notifications from "./components/eservice/eservsidebar/toolssidebar/settings/notifications/Notifications";
+import SettingsError from "./container/settingsLayout/SettingsError";
+import Ewallet from "./components/eservice/eservsidebar/toolssidebar/settings/ewallet/Ewallet";
+import DeliveryAddresses from "./container/eservice/DeliveryAddresses";
+import Messages from "./components/eservice/eservsidebar/toolssidebar/messages/Messages";
+import styles from "./App.module.css";
+import UserManagement from "./components/eservice/eservsidebar/toolssidebar/settings/users/UserManagement";
+import authReducer, {
+  AuthAction,
+  AuthState,
+} from "./state-management/reducers/authReducer";
+import AuthContext from "./state-management/contexts/authContext";
+import PasswordTest from "./components/eservice/eservsidebar/toolssidebar/settings/security/PasswordTest";
+import Recipients from "./container/eservice/Recipients";
+import HomePage from "./container/homePage/HomePage";
+import LoginPage from "./components/login/LoginPage";
+import walletReducer, {
+  WalletAction,
+  WalletState,
+} from "./state-management/reducers/walletReducer";
+import { WalletProvider } from "./state-management/contexts/walletContext";
+import Cart from "./components/eservice/eservsidebar/toolssidebar/cart/Cart";
+import { CartProvider } from "./state-management/contexts/cartContext";
+import ScrollToTopLayout from "./components/scrollToTop/ScrollToTopLayout";
+import CartPayment from "./components/eservice/eservsidebar/toolssidebar/cart/CartPayment";
+import PaymentHistory from "./components/eservice/eservsidebar/toolssidebar/settings/payment/PaymentHistory";
+import ForgotPassword from "./components/eservice/eservsidebar/toolssidebar/settings/security/ForgotPassword";
+import PasswordReset from "./components/eservice/eservsidebar/toolssidebar/settings/security/PasswordReset";
+import Login from "./components/login/Login";
+import LoginWithCarousel from "./container/loginwithcarousel/LoginWithCarousel";
+import ArchivedEwallet from "./components/eservice/eservsidebar/toolssidebar/settings/ewallet/pages/ArchivedEwallet";
+import DeliveryAddress from "./components/eservice/eservsidebar/toolssidebar/settings/delivery/DeliveryAddress";
+import Recipient from "./components/eservice/eservsidebar/toolssidebar/settings/recipients/Recipient";
+import { ScrollToTopArrow } from "./components/scrollToTop/ScrollToTop";
+import EzRegistration from "./components/eservice/eservsidebar/servicessidebar/ezregistration/EzRegistration";
+import { ModalProvider } from "./state-management/contexts/modalContext";
+import ModalManager from "./components/ModalManager";
+
+const initialState: AuthState = {
+  username: undefined,
+  subscriberId: undefined,
+  emailAddress: undefined,
+};
+
+const initialWalletState: WalletState = {
+  walletId: undefined,
+  preferredAccount: undefined,
+};
+
+const App = () => {
+  const [authState, authDispatch] = useReducer<
+    React.Reducer<AuthState, AuthAction>
+  >(authReducer, initialState);
+
+  const [walletState, dispatch] = useReducer<
+    React.Reducer<WalletState, WalletAction>
+  >(walletReducer, initialWalletState);
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <>
+        <Route element={<ScrollToTopLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginWithCarousel />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/password-reset" element={<PasswordReset />} />
+
+          <Route
+            path="eservice"
+            element={
+              authState.username ? (
+                <EserviceLayout />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+            errorElement={<SettingsError />}
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="applications" element={<Applications />} />
+            {/* <Route path="message" element={<Messages />} /> */}
+            <Route path="cart" element={<Cart />}>
+              <Route path="Checkout" element={<CartPayment />} />
+            </Route>
+            <Route path="Ezregistration" element={<EzRegistration />} />
+            <Route path="Settings" element={<SettingsLayout />}>
+              <Route index element={<Navigate to="Profile" replace />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="security" element={<PasswordTest />} />
+              {/* <Route path="security" element={<Security />} /> */}
+              <Route path="Delivery" element={<DeliveryAddress />} />
+              <Route path="Recipients" element={<Recipient />} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="ewallet" element={<Ewallet />} />
+              <Route path="ArchivedEwallet" element={<ArchivedEwallet />} />
+
+              <Route path="users" element={<UserManagement />} />
+              <Route path="PaymentHistory" element={<PaymentHistory />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+          </Route>
+        </Route>
+      </>
+    )
+  );
+
+  return (
+    <div className={styles["white__bg"]}>
+      <AuthContext.Provider value={{ authState, dispatch: authDispatch }}>
+        <CartProvider>
+          <WalletProvider>
+            <RouterProvider router={router} />
+          </WalletProvider>
+        </CartProvider>
+      </AuthContext.Provider>
+    </div>
+  );
+};
+
+export default App;
+import React, { createContext, ReactNode, useContext, useState } from "react";
+
+export enum ModalType {
+  SUCCESS = "success",
+  CAUTION = "caution",
+  ERROR = "error",
+  WARNING = "warning",
+  INFO = "info",
+  TOP_WALLET = "topWallet",
+  ADD_WALLET = "addWallet",
+  EDIT_WALLET_ALIAS = "editWalletAlias",
+  ADD_SUBSCRIPTION = "addSubscription",
+  ADD_TO_CART = "addToCart",
+  CONFIRM_ARCHIVE_WALLET = "confirmArchiveWallet",
+  ARCHIVE_WALLET = "archiveWallet",
+}
+
+interface ModalContextType {
+  modalType: ModalType | null;
+  modalMessage: string | string[] | null;
+  modalData: any; // Add modalData to store default values
+  openModal: (
+    type: ModalType,
+    data?: any,
+    message?: string | string[] | null
+  ) => void;
+  closeModal: () => void;
+}
+
+const ModalContext = createContext<ModalContextType>({} as ModalContextType);
+
+export const useModal = () => {
+  const context = useContext(ModalContext);
+  if (!context) {
+    throw new Error("useModal must be used within a ModalProvider");
+  }
+  return context;
+};
+
+export const ModalProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [modalType, setModalType] = useState<ModalType | null>(null);
+  const [modalData, setModalData] = useState<any>(null);
+  const [modalMessage, setModalMessage] = useState<string | string[] | null>(
+    null
+  );
+
+  const openModal = (
+    type: ModalType,
+    data?: any,
+    message?: string | string[] | null
+  ) => {
+    console.log(
+      `openModal called with type:${type}, data${data} and message:${message}`
+    );
+    setModalType(type);
+    setModalData(data);
+    setModalMessage(message || null);
+
+    setTimeout(() => {
+      console.log("Updated Modal State: ", {
+        modalType: type,
+        modalData: data,
+        modalMessage: message,
+      });
+    }, 0);
+  };
+
+  const closeModal = () => {
+    setModalType(null);
+    setModalData(null);
+    setModalMessage(null);
+  };
+
+  return (
+    <ModalContext.Provider
+      value={{ modalType, modalData, modalMessage, openModal, closeModal }}
+    >
+      {children}
+    </ModalContext.Provider>
+  );
+};
+import { createContext, ReactNode, useContext, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { IEwallet, useGetEwallets } from "../../hooks/useEwallets";
+import AuthContext from "./authContext";
+import axios from "axios";
+import {
+  CACHE_KEY_ARCHIVED_EWALLETS,
+  CACHE_KEY_EWALLETS,
+  variables,
+} from "../../Variables";
+import { CartItem, useCartContext } from "./cartContext";
+import { ModalProps } from "../../components/modals/Modal";
+import { useModal, ModalType } from "./modalContext";
+
+interface WalletContextType {
+  wallets: IEwallet[] | undefined;
+  handleLoadMore: () => void;
+  fetchNextPage: () => void;
+  hasNextPage: boolean | undefined;
+  isFetchingNextPage: boolean | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  selectedWallet: IEwallet | undefined;
+  isPreferredModalOpen: boolean;
+  isAliasModalOpen: boolean;
+  isAddSubscriptionModalOpen: boolean;
+  isCautionModalOpen: boolean;
+  isAddToCartModalOpen: boolean;
+  isTopUpModalOpen: boolean;
+  isArchiveModalOpen: boolean;
+  isUnArchiveModalOpen: boolean;
+  openMenuIndex: number | null;
+  page: number;
+  pageSize: number;
+  totalWallets: number | undefined;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
+  refetchWallets: () => void;
+  toggleMenu: (index: number | null) => void;
+  closeMenu: () => void;
+  closeAddToCart: () => void;
+  closeCautionModal: () => void;
+  closeAddSubscriptionModalOpen: () => void;
+  setAddSubscriptionModalOpen: (set: boolean) => void;
+  setAddToCartModalOpen: (set: boolean) => void;
+  setSelectedWallet: (wallet: IEwallet | undefined) => void;
+  performWalletAction: (action: Omit<CartItem, "id">) => void;
+  openPreferredModal: (wallet: IEwallet | undefined) => void;
+  setPreferredWallet: (preferredAccount: string | undefined) => void;
+
+  unArchiveWallet: (
+    subscriberId: number | undefined,
+    walletId: number | undefined
+  ) => void;
+  openArchiveModal: (wallet: IEwallet | undefined) => void;
+  openUnArchiveModal: (wallet: IEwallet | undefined) => void;
+  // openAliasModal: (wallet: IEwallet | undefined) => void;
+  openTopUpModal: () => void;
+  closeModals: () => void;
+  handleAddSubscriptionClick: () => void;
+  setAliasModalOpen: (set: boolean) => void;
+  setArchiveModalOpen: (isOpen: boolean) => void;
+  setPreferredAccountLoading: boolean;
+  unArchiveWalletLoading: boolean;
+  formError: string[] | undefined;
+  setFormError: (formError: string[] | undefined) => void;
+}
+
+// Check if wallet can be archived - should be in types.ts
+export interface ArchiveCheckResponse {
+  canArchive: boolean; //  will be present if validation passes
+  message: string; //  will be present when validation fails
+  errors?: string[] | undefined; //  will be present when validation fails
+}
+export interface ArchiveWallet extends ModalProps {
+  subscriberId: number | undefined;
+  walletId: number | undefined;
+}
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
+
+export const useWalletContext = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error(
+      "useWalletContext must be used within a WalletContextProvider"
+    );
+  }
+  return context;
+};
+
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const queryClient = useQueryClient();
+  const [selectedWallet, setSelectedWallet] = useState<IEwallet | undefined>(
+    undefined
+  );
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
+  const [activeSubscription, setActiveSubscription] = useState<number | null>(
+    null
+  );
+
+  const [formError, setFormError] = useState<string[] | undefined>([]);
+
+  const [isAddToCartModalOpen, setAddToCartModalOpen] = useState(false);
+  const [isAddSubscriptionModalOpen, setAddSubscriptionModalOpen] =
+    useState(false);
+  const [isTopUpModalOpen, setTopUpModalOpen] = useState(false);
+  const [isAliasModalOpen, setAliasModalOpen] = useState(false);
+  const [isPreferredModalOpen, setPreferredModalOpen] = useState(false);
+  const [isArchiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [isUnArchiveModalOpen, setUnArchiveModalOpen] = useState(false);
+  const [isCautionModalOpen, setCautionModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(4);
+
+  const handleLoadMore = () => {
+    //fetchNextPage();
+    setPageSize((prev) => prev + 2);
+  };
+  const { authState } = useContext(AuthContext);
+
+  //  Fetch wallets
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useGetEwallets(authState.subscriberId, pageSize);
+  const { openModal, closeModal } = useModal();
+
+  const wallets = data?.pages.flatMap((page) => page.wallets) || [];
+  const totalWallets = data?.pages[0].total || 0;
+
+  const refetchWallets = () => {
+    refetch();
+  };
+
+  const cartContext = useCartContext();
+
+  const performWalletAction = (action: Omit<CartItem, "id">) => {
+    console.log("Perfoming wallet action:", action);
+    cartContext.addItem(action); // Calls CartContext's addItem
+  };
+
+  const toggleMenu = (index: number | null) => {
+    setOpenMenuIndex((prev) => (prev === index ? null : index));
+  };
+
+  const closeMenu = () => {
+    setOpenMenuIndex(null);
+  };
+
+  const closeAddSubscriptionModalOpen = () => {
+    setAddSubscriptionModalOpen(false);
+  };
+
+  const closeCautionModal = () => {
+    setCautionModalOpen(false);
+  };
+
+  const closeAddToCart = () => {
+    setAddToCartModalOpen(false);
+  };
+  const fetchActiveSubscription = async (walletId: number | undefined) => {
+    try {
+      const response = await axios.get(
+        `${variables.SUBSCRIPTION_STATUS}${walletId}`
+      );
+      setActiveSubscription(response.data.activeSubscription);
+      return response.data.activeSubscription;
+    } catch (error) {
+      console.error("Failed to fetch subscription status", error);
+      setActiveSubscription(null);
+    }
+  };
+
+  const handleAddSubscriptionClick = async () => {
+    console.log(selectedWallet);
+
+    if (selectedWallet) {
+      const subscription = await fetchActiveSubscription(selectedWallet.id);
+      if (subscription > 0) {
+        console.log("has subscription");
+        setCautionModalOpen(true); // Display caution modal
+      } else {
+        setAddSubscriptionModalOpen(true); // Proceed to add subscription
+        console.log("does not have subscription");
+      }
+    }
+    // try {
+    //   const response = await axios.get(
+    //     `${variables.SUBSCRIPTION_STATUS}${selectedWallet?.id}`
+    //   );
+    //   const activeSubscription = response.data.activeSubscription;
+
+    //   if (activeSubscription > 0) {
+    //     console.log("has subscription");
+    //     openModal(ModalType.CAUTION); // Display caution modal
+    //   } else {
+    //     console.log("does not have subscription");
+    //     console.log(" selected wallet", selectedWallet);
+
+    //     setTimeout(() => {
+    //       console.log("Triggering Add Subscription Modal");
+    //       openModal(ModalType.ADD_SUBSCRIPTION); // Ensures 'selectedWallet' is set before opening modal
+    //     }, 100); // Small delay to allow update
+    //     //  openModal(ModalType.ADD_SUBSCRIPTION); // Proceed to add subscription
+    //     //openModal(ModalType.ADD_TO_CART, {});
+    //   }
+    // } catch (error) {
+    //   console.error("Error fetching subscription status", error);
+    //   openModal(ModalType.ERROR, null, "Error fetching subscription status");
+    // }
+  };
+  const openPreferredModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setPreferredModalOpen(true);
+  };
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setPreferredModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = ["An error occurred"];
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount);
+  };
+
+  // Mutation to Unarchive wallet
+  const unArchiveWalletMutation = useMutation(
+    ({ subscriberId, walletId }: ArchiveWallet) =>
+      axios.post(`${variables.UNARCHIVE_WALLET}`, {
+        subscriberId: subscriberId,
+        walletId: walletId,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_ARCHIVED_EWALLETS]);
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        setUnArchiveModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = ["An error occurred"];
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const unArchiveWallet = (
+    subscriberId: number | undefined,
+    walletId: number | undefined
+  ) => {
+    unArchiveWalletMutation.mutate({ subscriberId, walletId });
+  };
+  const openArchiveModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+
+    setArchiveModalOpen(true);
+  };
+
+  const openUnArchiveModal = (wallet: IEwallet | undefined) => {
+    setSelectedWallet(wallet);
+    setUnArchiveModalOpen(true);
+  };
+
+  const openTopUpModal = () => {
+    setTopUpModalOpen(true);
+  };
+  // const openAliasModal = (wallet: IEwallet | undefined) => {
+  //   setSelectedWallet(wallet);
+  //   // openModal(ModalType.EDIT_WALLET_ALIAS);
+  //   setAliasModalOpen(true);
+  // };
+
+  const closeModals = () => {
+    setArchiveModalOpen(false);
+    setUnArchiveModalOpen(false);
+    setTopUpModalOpen(false);
+    setAliasModalOpen(false);
+    setPreferredModalOpen(false);
+    setSelectedWallet(undefined);
+    setFormError(undefined);
+    setCautionModalOpen(false);
+    setAddSubscriptionModalOpen(false);
+    setAddToCartModalOpen(false);
+  };
+
+  const value = {
+    wallets,
+    isLoading,
+    error,
+    openMenuIndex,
+    selectedWallet,
+    isPreferredModalOpen,
+    isAliasModalOpen,
+    isAddSubscriptionModalOpen,
+    isCautionModalOpen,
+    isAddToCartModalOpen,
+    isTopUpModalOpen,
+    isArchiveModalOpen,
+    isUnArchiveModalOpen,
+    toggleMenu,
+    closeMenu,
+    closeAddToCart,
+    closeAddSubscriptionModalOpen,
+    closeCautionModal,
+    setSelectedWallet,
+    performWalletAction,
+    openPreferredModal,
+    setAddToCartModalOpen,
+    setAddSubscriptionModalOpen,
+    setPreferredWallet,
+    setAliasModalOpen,
+    openArchiveModal,
+    openUnArchiveModal,
+    unArchiveWallet,
+    openTopUpModal,
+    //openAliasModal,
+    closeModals,
+    handleAddSubscriptionClick,
+    page,
+    pageSize,
+    totalWallets,
+    setPage,
+    setPageSize,
+    refetchWallets,
+    setArchiveModalOpen,
+    setPreferredAccountLoading: setPreferredWalletMutation.isLoading,
+    unArchiveWalletLoading: unArchiveWalletMutation.isLoading,
+    formError,
+    setFormError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    handleLoadMore,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
+  );
+};
+
+export { WalletContext };
+import Button from "../../button/Button";
+import AddtoCart from "../../../assets/AddtoCart.svg";
+import Modal from "../Modal";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import { useWalletContext } from "../../../state-management/contexts/walletContext";
+import { useNavigate } from "react-router-dom";
+import { useCartContext } from "../../../state-management/contexts/cartContext";
+import { useModal } from "../../../state-management/contexts/modalContext";
+
+const AddtoCartModal = () => {
+  const { closeModal } = useModal();
+  const { items, cartTotal } = useCartContext();
+  const navigate = useNavigate();
+
+  const handleProceed = () => {
+    closeModal();
+    navigate("/eservice/Cart");
+  };
+
+  return (
+    <Modal isOpen={true} onClose={closeModal}>
+      <ModalBody
+        align="center"
+        imageUrl={AddtoCart}
+        bodyTitle="Successfully added to cart!"
+      >
+        {/* <p>
+          Cart subtotal ({cartItems} items): <b>${cartTotal}</b>
+        </p>{" "} */}
+        <p>
+          Cart subtotal ({items.length} items): <b>${cartTotal}</b>
+        </p>{" "}
+      </ModalBody>
+      <ModalFooter align="center">
+        <Button variant="cancel-success" onClick={closeModal}>
+          Close
+        </Button>
+        <Button variant="success" onClick={handleProceed}>
+          Proceed to cart
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default AddtoCartModal;
