@@ -1,0 +1,210 @@
+	// error
+
+Uncaught (in promise) TypeError: performWalletAction is not a function
+    at onSubmit (TopUpeWallet.tsx:53:7)
+	
+	// walletContext
+	
+	
+  const cartContext = useCartContext();
+
+  const performWalletAction = (action: Omit<CartItem, "id">) => {
+    console.log("Perfoming wallet action:", action);
+    cartContext.addItem(action); // Calls CartContext's addItem
+  };
+
+
+// topup modal
+
+import React from "react";
+import styles from "./TopUpeWallet.module.css";
+import FormStyles from "../../FormFields.module.css";
+import Modal, { ModalProps } from "../Modal";
+import ModalHeader from "../ModalHeader";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import Button from "../../button/Button";
+import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
+import AddtoCartModal from "../addtocart/AddtoCartModal";
+import FormLabel from "../../label/FormLabel";
+
+import Input from "../../textfield/Input";
+import { useWalletContext } from "../../../state-management/contexts/walletContext";
+import { useCartContext } from "../../../state-management/contexts/cartContext";
+import {
+  ModalType,
+  useModal,
+} from "../../../state-management/contexts/modalContext";
+
+interface TopUpFormData {
+  amount: number;
+}
+
+const TopUpeWallet: React.FC<ModalProps> = ({ isOpen, onClose }) => {
+  const { modalData: selectedWallet, openModal, closeModal } = useModal();
+
+  const {
+    //  isAddToCartModalOpen,
+    // incrementCart,
+    setAddToCartModalOpen,
+    closeModals,
+    performWalletAction,
+  } = useWalletContext();
+  const { incrementCartTotal } = useCartContext();
+
+  const methods = useForm<TopUpFormData>();
+  const {
+    register,
+    handleSubmit,
+    reset, // Used to reset the form with new default values
+    formState: { errors, isDirty },
+  } = methods;
+
+  const handleCancelClick = () => {
+    closeModal();
+    reset();
+  };
+  console.log("Selected Wallet", selectedWallet);
+  const onSubmit: SubmitHandler<TopUpFormData> = (data) => {
+    console.log(selectedWallet);
+    if (selectedWallet) {
+      performWalletAction({
+        name: "Document",
+        accountIdentifier: selectedWallet.accountIdentifier,
+        amount: data.amount,
+        description: "Wallet TopUp",
+      });
+      reset();
+      closeModal();
+      incrementCartTotal(data.amount);
+      openModal(ModalType.ADD_TO_CART);
+      //setAddToCartModalOpen(true);
+    } else {
+      console.log("No wallet selected");
+    }
+  };
+  if (!isOpen) return null;
+  return (
+    <>
+      {" "}
+      <Modal isOpen={isOpen}>
+        <ModalHeader children="Top Up eWallet" onClose={handleCancelClick} />
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <ModalBody>
+              <div className={styles["input-column"]}>
+                <FormLabel
+                  htmlFor="amount"
+                  label="Please enter top up amount."
+                />
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="Amount"
+                  register={register("amount", {
+                    required: true,
+                    valueAsNumber: true,
+                    min: 1000,
+                    max: 20000,
+                  })}
+                />
+                {errors.amount?.type === "required" && (
+                  <p className={FormStyles.errors}>
+                    The Amount field is required
+                  </p>
+                )}
+
+                {errors.amount?.type === "min" && (
+                  <p className={FormStyles.errors}>Must be atleast $1000.</p>
+                )}
+                {errors.amount?.type === "max" && (
+                  <p className={FormStyles.errors}>
+                    Must not exceed 20000 characters
+                  </p>
+                )}
+              </div>
+            </ModalBody>
+            <ModalFooter align="right">
+              <Button
+                variant="cancel-secondary"
+                className={styles.outlined}
+                onClick={handleCancelClick}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                type="submit"
+                className={styles.solidBtn}
+              >
+                Confirm
+              </Button>
+            </ModalFooter>
+          </form>
+        </FormProvider>
+      </Modal>{" "}
+      {/* {isAddToCartModalOpen && <AddtoCartModal />} */}
+    </>
+  );
+};
+
+export default TopUpeWallet;
+ 
+ 
+ whenever i remove the the performWalletAction from onSubmit a next error appears about
+ incrementCart
+ 
+ error : useNavigate() may be used only in the context of a <Router> component.
+    at invariant (react-router-dom.js?v=7b2ce1f9:205:11)
+    at useNavigateUnstable (react-router-dom.js?v=7b2ce1f9:3183:34)
+    at useNavigate (react-router-dom.js?v=7b2ce1f9:3180:46)
+    at AddtoCartModal (AddtoCartModal.tsx:14:20)
+	
+	
+	import Button from "../../button/Button";
+import AddtoCart from "../../../assets/AddtoCart.svg";
+import Modal from "../Modal";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import { useWalletContext } from "../../../state-management/contexts/walletContext";
+import { useNavigate } from "react-router-dom";
+import { useCartContext } from "../../../state-management/contexts/cartContext";
+import { useModal } from "../../../state-management/contexts/modalContext";
+
+const AddtoCartModal = () => {
+  const { closeModal } = useModal();
+  const { items, cartTotal } = useCartContext();
+  const navigate = useNavigate();
+
+  const handleProceed = () => {
+    closeModal();
+    navigate("/eservice/Cart");
+  };
+
+  return (
+    <Modal isOpen={true} onClose={closeModal}>
+      <ModalBody
+        align="center"
+        imageUrl={AddtoCart}
+        bodyTitle="Successfully added to cart!"
+      >
+        {/* <p>
+          Cart subtotal ({cartItems} items): <b>${cartTotal}</b>
+        </p>{" "} */}
+        <p>
+          Cart subtotal ({items.length} items): <b>${cartTotal}</b>
+        </p>{" "}
+      </ModalBody>
+      <ModalFooter align="center">
+        <Button variant="cancel-success" onClick={closeModal}>
+          Close
+        </Button>
+        <Button variant="success" onClick={handleProceed}>
+          Proceed to cart
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default AddtoCartModal;
