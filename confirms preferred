@@ -1,0 +1,122 @@
+import { useWalletContext } from "../../../../../../../state-management/contexts/walletContext";
+import Button from "../../../../../../button/Button";
+import Modal, { ModalProps } from "../../../../../../modals/Modal";
+import ModalBody from "../../../../../../modals/ModalBody";
+import ModalFooter from "../../../../../../modals/ModalFooter";
+import ModalHeader from "../../../../../../modals/ModalHeader";
+import ModalStyles from "../../../../../../modals/Modal.module.css";
+import ModalError from "../../../../../../errormessage/ErrorMessage";
+import { useModal } from "../../../../../../../state-management/contexts/modalContext";
+const ConfirmPreferredAccountModal = ({ isOpen, onClose }: ModalProps) => {
+  const { modalData: selectedWallet } = useModal();
+  const {
+    isPreferredModalOpen,
+    setPreferredAccountLoading,
+    formError,
+    setFormError,
+    setPreferredWallet,
+    closeModals,
+  } = useWalletContext();
+
+  const handleConfirmClick = () => {
+    setFormError(undefined); // Clear any previous errors
+
+    setPreferredWallet(selectedWallet?.accountIdentifier);
+  };
+
+  const handleCancelClick = () => {
+    closeModals();
+  };
+  if (!isOpen) return null; // Only render the modal if it's open
+
+  return (
+    <Modal className={ModalStyles.modal} isOpen={isOpen}>
+      <ModalHeader children="Confirm Preferred Account" onClose={onClose} />
+      <ModalBody align="center">
+        {formError && (
+          <ModalError
+            errorMessage={`Failed to set preferred account: ${
+              formError || "Unknown error"
+            }`}
+          />
+        )}{" "}
+        <p>
+          Are you sure you want to set this wallet as your preferred wallet?
+        </p>
+        <p className={ModalStyles.textLine}>
+          <span className={ModalStyles.label}>Wallet Number: </span>
+          <span className={ModalStyles.value}>
+            {selectedWallet?.accountIdentifier}
+          </span>
+        </p>
+        <p className={ModalStyles.textLine}>
+          <span className={ModalStyles.label}>Balance: </span>
+          <span className={ModalStyles.value}>
+            {" "}
+            {selectedWallet?.amount.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>
+        </p>
+      </ModalBody>
+
+      <ModalFooter align="center">
+        <Button
+          variant="cancel-secondary"
+          className={ModalStyles.outlined}
+          onClick={onClose}
+          type="button"
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="secondary"
+          className={ModalStyles.solidBtn}
+          onClick={handleConfirmClick}
+          type="submit"
+          disabled={setPreferredAccountLoading}
+        >
+          {setPreferredAccountLoading ? "Confirming..." : " Confirm"}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default ConfirmPreferredAccountModal;
+
+
+  //  Mutation to set preferred wallet
+  const setPreferredWalletMutation = useMutation(
+    (preferredAccount: string | undefined) =>
+      axios.post(`${variables.UPDATE_PREFERRED}${authState.subscriberId}`, {
+        preferredAccount: preferredAccount,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([CACHE_KEY_EWALLETS]);
+        //  setPreferredModalOpen(false);
+      },
+
+      onError: (error: any) => {
+        console.error("Error Response", error);
+        let errorMessage = ["An error occurred"];
+        if (error.response) {
+          const backendError = error.response.data;
+          if (backendError.errors && backendError.errors.subscriberId) {
+            errorMessage = backendError.errors.subscriberId[0];
+          } else if (backendError.title) {
+            errorMessage = backendError.title;
+            console.log(backendError.title);
+          }
+        }
+        setFormError(errorMessage);
+      },
+    }
+  );
+  const setPreferredWallet = (preferredAccount: string | undefined) => {
+    setPreferredWalletMutation.mutate(preferredAccount);
+  };
+
+
