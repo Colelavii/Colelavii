@@ -1,0 +1,297 @@
+import { useContext, useState } from "react";
+import { toast, ToastContainer } from "react-toastify";
+import Button from "../../../../../button/Button";
+import Tile from "../../../../../tile/Tile";
+import { IDeliveryAddress } from "../../../../../interface/IDeliveryAddress";
+import DeleteModal from "../../../../../modals/deleteModals/DeleteModal";
+import UpdateDeliveryAddressModal from "../../../../../modals/updateModals/UpdateDeliveryAddressModal";
+import { useDeleteDeliveryAddress } from "../../../../../../react-query/services/hooks/useDelivery";
+import useGetDeliveryAddresses from "./hooks/useGetDeliveryAddresses";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import React from "react";
+import Loader from "../../../../../modals/loadingModal/Loader";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import ErrorMessage from "../../../../../errormessage/ErrorMessage";
+import {
+  ModalType,
+  useModal,
+} from "../../../../../../state-management/contexts/modalContext";
+
+const Delivery = () => {
+  const {modalData, openModal, closeModal } = useModal();
+  const pageSize = 2;
+  const [selectedTile, setSelectedTile] = useState<IDeliveryAddress>();
+  const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [formError, setFormError] = useState<string | undefined>(undefined);
+
+  const { authState } = useContext(AuthContext);
+  const subscriberId = authState?.subscriberId;
+
+  const {
+    data: deliveryData,
+    isLoading: isDeliveryAddressLoading,
+    isRefetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    error,
+  } = useGetDeliveryAddresses({ pageSize });
+
+  const { mutate: deleteAddress, isLoading: isRemoving } =
+    useDeleteDeliveryAddress();
+
+  const addresses =
+    deliveryData?.pages.flatMap((page) => page.formAddresses) || [];
+  const totalAddresses = deliveryData?.pages[0].total || 0;
+
+  const handleOpenAddModal = () => openModal(ModalType.ADD_DELIVERY_ADDRESS);
+
+  const handleOpenUpdateModal = (data: IDeliveryAddress) => {
+    setSelectedTile(data);
+    setUpdateModalOpen(true);
+  };
+
+  const handleCloseUpdateModal = () => {
+    setSelectedTile(undefined);
+    setUpdateModalOpen(false);
+  };
+
+  const handleOpenDeleteModal = (data: IDeliveryAddress) => {
+    setSelectedTile(data);
+    console.log("selected tile", selectedTile, selectedTile?.addressId)
+    setDeleteModalOpen(true);
+    openModal(ModalType.DELETE, data, "")
+  };
+
+  // const handleCloseDeleteModal = () => {
+  //   setDeleteModalOpen(false);
+  //   setSelectedTile(undefined);
+  //   setFormError(undefined); // Clear any previous errors
+  // };
+
+
+  const handleUpdateSuccess = () => handleCloseUpdateModal();
+
+  const handleDeleteAddress = () => {
+    setFormError(undefined); // Clear any previous errors
+
+    if (selectedTile && subscriberId) {
+      deleteAddress(
+        {
+          subscriberId: subscriberId,
+          addressId: selectedTile.addressId,
+        },
+        {
+          onSuccess: () => {
+            setSelectedTile(undefined);
+            setFormError(undefined); // Clear any previous errors
+        
+            closeModal();
+            openModal(ModalType.SUCCESS, null,"Delivery Address deleted successfully!")
+           // handleCloseDeleteModal();
+          },
+          onError: (error: any) => {
+            setFormError(error.message);
+          },
+        }
+      );
+    }
+  };
+
+  const renderDeliveryAddresses = () => {
+    //  console.log("deliveryData", deliveryData);
+    return deliveryData?.pages?.map((page, pageIndex) => (
+      <React.Fragment key={pageIndex}>
+        {page.formAddresses?.map((addr, index) => (
+          <Tile
+            onUpdateClick={() => handleOpenUpdateModal(addr)}
+            onDeleteClick={() => handleOpenDeleteModal(addr)}
+            key={index}
+          >
+            <li>
+              <p>
+                {addr.thoroughfareNumber} {addr.thoroughfareName}
+              </p>
+              <p>{addr.nearestTown}</p>
+              <p>{addr.postOffice}</p>
+              <p>{addr.parish}</p>
+              <p>{addr.postalCodeStr}</p>
+              <p>{addr.country}</p>
+            </li>
+          </Tile>
+        ))}
+      </React.Fragment>
+    ));
+  };
+
+  return (
+    <StandardLayout
+      header="Delivery Addresses"
+      button={
+        <Button variant="primary" onClick={handleOpenAddModal}>
+          Add Address
+        </Button>
+      }
+    >
+      <ToastContainer />
+
+      {(isRefetching || isDeliveryAddressLoading) && <Loader />}
+
+      {!isDeliveryAddressLoading && totalAddresses === 0 && (
+        <p className="no-applications-message">No address available.</p>
+      )}
+
+      {error ? (
+        <ErrorMessage
+          errorMessage={`Error loading addresses: ${error.message}`}
+        />
+      ) : (
+        <>
+          <div className="gridContainer">{renderDeliveryAddresses()}</div>
+          <div className="pagiContainer">
+            <p>
+              Showing {addresses?.length} of {totalAddresses} addresses
+            </p>
+            {hasNextPage && (
+              <Button
+                variant="secondary"
+                disabled={isFetchingNextPage}
+                onClick={() => fetchNextPage()}
+              >
+                {isFetchingNextPage ? "Loading..." : "Load More"}
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* <DeleteModal
+        isOpen={isDeleteModalOpen}
+        isLoading={isRemoving}
+        onClose={handleCloseDeleteModal}
+        onDelete={handleDeleteAddress}
+        error={formError}
+      /> */}
+      {isUpdateModalOpen && selectedTile && (
+        <UpdateDeliveryAddressModal
+          isOpen={isUpdateModalOpen}
+          onClose={handleCloseUpdateModal}
+          tile={selectedTile}
+          onUpdateSuccess={handleUpdateSuccess}
+        />
+      )}
+    </StandardLayout>
+  );
+};
+
+export default Delivery;
+import React, { useState } from "react";
+import FormStyles from "../../FormFields.module.css";
+import ModalStyles from "../Modal.module.css";
+import Modal, { ModalProps } from "../Modal";
+import DeleteImage from "../../../assets/DeleteImage.svg";
+import ModalHeader from "../ModalHeader";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import Button from "../../button/Button";
+import AuthModal from "../authorisedUser/AuthModal";
+import ModalError from "../../errormessage/ErrorMessage";
+import { useModal } from "../../../state-management/contexts/modalContext";
+
+export interface DeleteModalProps extends ModalProps {
+  isLoading: boolean;
+  onDelete: () => void;
+  error?: string;
+}
+const DeleteModal: React.FC<DeleteModalProps> = ({
+  isOpen,
+  isLoading,
+  error,
+  onClose,
+  onDelete,
+  children,
+}) => {
+  const {modalData} = useModal();
+  if (!isOpen) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalError errorMessage={error} />
+
+      <ModalBody
+        align="center"
+        imageUrl={DeleteImage}
+        bodyTitle="Are you sure?"
+      ></ModalBody>
+
+      <ModalFooter align="center">
+        <Button variant="cancel-error" onClick={onClose}>
+          Cancel
+        </Button>
+
+        <Button variant="error" onClick={onDelete} disabled={isLoading}>
+          {isLoading ? "Removing..." : "Remove"}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default DeleteModal;
+
+// Delete Delivery Address
+const deleteDeliveryAddress = async ({
+  addressId,
+  subscriberId,
+}: {
+  addressId: string;
+  subscriberId: number;
+}) => {
+  const response = await axios.delete(
+    `${variables.BASE_API_URL}${variables.DELETEADDRESS_ENDPOINT}subscriberId=${subscriberId}&addressId=${addressId}`
+  );
+  return response.data;
+};
+export const useDeleteDeliveryAddress = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(deleteDeliveryAddress, {
+    onSuccess: () => {
+      queryClient.invalidateQueries([CACHE_KEY_ADDRESSES]);
+    },
+    // onError: (error) => {
+    //   toast.error(`An error occurred: ${error}`);
+    // },
+  });
+};
+
+import React from "react";
+import { useModal, ModalType } from "../state-management/contexts/modalContext";
+import { SuccessModal } from "./modals/success/SuccessModal";
+import ErrorModal from "./modals/errorModal/ErrorModal";
+import AddNewEwalletModal from "./eservice/eservsidebar/toolssidebar/settings/ewallet/modals/AddNewEwalletModal";
+import EditEwalletAliasModal from "./modals/updateModals/EditEwalletAliasModal";
+import AddSubscriptionModal from "./modals/addSubscription/AddSubscriptionModal";
+import AddtoCartModal from "./modals/addtocart/AddtoCartModal";
+import CautionModal from "./modals/caution/CautionModal";
+import TopUpeWallet from "./modals/topupeWallet/TopUpeWallet";
+import { BrowserRouter } from "react-router-dom";
+import ConfirmPreferredAccountModal from "./eservice/eservsidebar/toolssidebar/settings/ewallet/modals/ConfirmPreferredAccountModal";
+import AddDeliveryAddressModal from "./modals/addModals/AddDeliveryAddressModal";
+import DeleteModal from "./modals/deleteModals/DeleteModal";
+
+const ModalManager: React.FC = () => {
+  const { modalType, modalData, modalMessage, closeModal } = useModal();
+  console.log("ModalManager Rendered: ");
+  console.log("ModalManager State: ", { modalType, modalData, modalMessage });
+
+  switch (modalType) {
+    case ModalType.SUCCESS:
+      return <SuccessModal isOpen={true} onClose={closeModal} />;
+    case ModalType.ERROR:
+      return (
+        <ErrorModal isOpen={true} errors={modalMessage} onClose={closeModal} />
+      );
+      default:
+        return null;
+  }
