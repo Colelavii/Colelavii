@@ -1,0 +1,246 @@
+import React, { useReducer } from "react";
+import {
+  createBrowserRouter,
+  Route,
+  createRoutesFromElements,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
+import Dashboard from "./components/eservice/eservsidebar/toolssidebar/dashboard/Dashboard";
+import Applications from "./components/eservice/eservsidebar/toolssidebar/applications/Applications";
+import EserviceLayout from "./container/eservice/eserviceLayout/EserviceLayout";
+import SettingsLayout from "./container/settingsLayout/SettingsLayout";
+import Settings from "./components/eservice/eservsidebar/toolssidebar/settings/Settings";
+import Profile from "./components/eservice/eservsidebar/toolssidebar/settings/profile/Profile";
+import Notifications from "./components/eservice/eservsidebar/toolssidebar/settings/notifications/Notifications";
+import SettingsError from "./container/settingsLayout/SettingsError";
+import Ewallet from "./components/eservice/eservsidebar/toolssidebar/settings/ewallet/Ewallet";
+import DeliveryAddresses from "./container/eservice/DeliveryAddresses";
+import Messages from "./components/eservice/eservsidebar/toolssidebar/messages/Messages";
+import styles from "./App.module.css";
+import UserManagement from "./components/eservice/eservsidebar/toolssidebar/settings/users/UserManagement";
+import authReducer, {
+  AuthAction,
+  AuthState,
+} from "./state-management/reducers/authReducer";
+import AuthContext from "./state-management/contexts/authContext";
+import PasswordTest from "./components/eservice/eservsidebar/toolssidebar/settings/security/PasswordTest";
+import Recipients from "./container/eservice/Recipients";
+import HomePage from "./container/homePage/HomePage";
+import LoginPage from "./components/login/LoginPage";
+import walletReducer, {
+  WalletAction,
+  WalletState,
+} from "./state-management/reducers/walletReducer";
+import { WalletProvider } from "./state-management/contexts/walletContext";
+import Cart from "./components/eservice/eservsidebar/toolssidebar/cart/Cart";
+import { CartProvider } from "./state-management/contexts/cartContext";
+import ScrollToTopLayout from "./components/scrollToTop/ScrollToTopLayout";
+import CartPayment from "./components/eservice/eservsidebar/toolssidebar/cart/CartPayment";
+import PaymentHistory from "./components/eservice/eservsidebar/toolssidebar/settings/payment/PaymentHistory";
+import ForgotPassword from "./components/eservice/eservsidebar/toolssidebar/settings/security/ForgotPassword";
+import PasswordReset from "./components/eservice/eservsidebar/toolssidebar/settings/security/PasswordReset";
+import Login from "./components/login/Login";
+import LoginWithCarousel from "./container/loginwithcarousel/LoginWithCarousel";
+import ArchivedEwallet from "./components/eservice/eservsidebar/toolssidebar/settings/ewallet/pages/ArchivedEwallet";
+import DeliveryAddress from "./components/eservice/eservsidebar/toolssidebar/settings/delivery/DeliveryAddress";
+import Recipient from "./components/eservice/eservsidebar/toolssidebar/settings/recipients/Recipient";
+import { ScrollToTopArrow } from "./components/scrollToTop/ScrollToTop";
+import EzRegistration from "./components/eservice/eservsidebar/servicessidebar/ezregistration/EzRegistration";
+import { ModalProvider } from "./state-management/contexts/modalContext";
+import ModalManager from "./components/ModalManager";
+
+const initialState: AuthState = {
+  username: undefined,
+  subscriberId: undefined,
+  emailAddress: undefined,
+};
+
+const initialWalletState: WalletState = {
+  walletId: undefined,
+  preferredAccount: undefined,
+};
+
+const App = () => {
+  const [authState, authDispatch] = useReducer<
+    React.Reducer<AuthState, AuthAction>
+  >(authReducer, initialState);
+
+  const [walletState, dispatch] = useReducer<
+    React.Reducer<WalletState, WalletAction>
+  >(walletReducer, initialWalletState);
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <>
+        <Route element={<ScrollToTopLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginWithCarousel />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/password-reset" element={<PasswordReset />} />
+
+          <Route
+            path="eservice"
+            element={
+              authState.username ? (
+                <EserviceLayout />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+            errorElement={<SettingsError />}
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="applications" element={<Applications />} />
+            {/* <Route path="message" element={<Messages />} /> */}
+            <Route path="cart" element={<Cart />}>
+              <Route path="Checkout" element={<CartPayment />} />
+            </Route>
+            <Route path="Ezregistration" element={<EzRegistration />} />
+            <Route path="Settings" element={<SettingsLayout />}>
+              <Route index element={<Navigate to="Profile" replace />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="security" element={<PasswordTest />} />
+              {/* <Route path="security" element={<Security />} /> */}
+              <Route path="Delivery" element={<DeliveryAddress />} />
+              <Route path="Recipients" element={<Recipient />} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="ewallet" element={<Ewallet />} />
+              <Route path="ArchivedEwallet" element={<ArchivedEwallet />} />
+
+              <Route path="users" element={<UserManagement />} />
+              <Route path="PaymentHistory" element={<PaymentHistory />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+          </Route>
+        </Route>
+      </>
+    )
+  );
+
+  return (
+    <div className={styles["white__bg"]}>
+      <AuthContext.Provider value={{ authState, dispatch: authDispatch }}>
+        <ModalProvider>
+          <CartProvider>
+            <WalletProvider>
+              <ModalManager />
+              <RouterProvider router={router} />
+            </WalletProvider>
+          </CartProvider>
+        </ModalProvider>
+      </AuthContext.Provider>
+    </div>
+  );
+};
+
+export default App;
+import React from "react";
+import { useModal, ModalType } from "../state-management/contexts/modalContext";
+import { SuccessModal } from "./modals/success/SuccessModal";
+import ErrorModal from "./modals/errorModal/ErrorModal";
+import AddNewEwalletModal from "./eservice/eservsidebar/toolssidebar/settings/ewallet/modals/AddNewEwalletModal";
+import EditEwalletAliasModal from "./modals/updateModals/EditEwalletAliasModal";
+import AddSubscriptionModal from "./modals/addSubscription/AddSubscriptionModal";
+import AddtoCartModal from "./modals/addtocart/AddtoCartModal";
+import CautionModal from "./modals/caution/CautionModal";
+import TopUpeWallet from "./modals/topupeWallet/TopUpeWallet";
+import ConfirmPreferredAccountModal from "./eservice/eservsidebar/toolssidebar/settings/ewallet/modals/ConfirmPreferredAccountModal";
+import AddDeliveryAddressModal from "./modals/addModals/AddDeliveryAddressModal";
+import DeleteModal from "./modals/deleteModals/DeleteModal";
+import UpdateDeliveryAddressModal from "./modals/updateModals/UpdateDeliveryAddressModal";
+import AddRecipientModal from "./eservice/eservsidebar/toolssidebar/settings/recipients/modals/AddRecipientModal";
+import UpdateRecipientModal from "./eservice/eservsidebar/toolssidebar/settings/recipients/modals/UpdateRecipientModal";
+import DeleteRecipientModal from "./eservice/eservsidebar/toolssidebar/settings/recipients/modals/DeleteRecipientModal";
+
+const ModalManager: React.FC = () => {
+  const { modalType, modalData, modalMessage, closeModal } = useModal();
+  console.log("ModalManager Rendered: ");
+  console.log("ModalManager State: ", { modalType, modalData, modalMessage });
+
+  switch (modalType) {
+    case ModalType.SUCCESS:
+      return <SuccessModal isOpen={true} onClose={closeModal} />;
+    case ModalType.ERROR:
+      return <ErrorModal isOpen={true} onClose={closeModal} />;
+    case ModalType.CAUTION:
+      return <CautionModal isOpen={true} onClose={closeModal} />;
+    case ModalType.DELETE:
+      return <DeleteModal isOpen={true} onClose={closeModal} />;
+    case ModalType.ADD_DELIVERY_ADDRESS:
+      return <AddDeliveryAddressModal isOpen={true} onClose={closeModal} />;
+    case ModalType.UPDATE_DELIVERY_ADDRESS:
+      return <UpdateDeliveryAddressModal isOpen={true} onClose={closeModal} />;
+    case ModalType.ADD_RECIPIENT:
+      return <AddRecipientModal isOpen={true} onClose={closeModal} />;
+    case ModalType.UPDATE_RECIPIENT:
+      return <UpdateRecipientModal isOpen={true} onClose={closeModal} />;
+    case ModalType.DELETE_RECIPIENT:
+      return <DeleteRecipientModal isOpen={true} onClose={closeModal} />;
+    case ModalType.ADD_SUBSCRIPTION:
+      return <AddSubscriptionModal isOpen={true} onClose={closeModal} />;
+    case ModalType.ADD_TO_CART:
+      return <AddtoCartModal isOpen={true} onClose={closeModal} />;
+    case ModalType.TOP_UP_WALLET:
+      return <TopUpeWallet isOpen={true} onClose={closeModal} />;
+    case ModalType.ADD_WALLET:
+      return <AddNewEwalletModal isOpen={true} onClose={closeModal} />;
+    case ModalType.EDIT_WALLET_ALIAS:
+      return <EditEwalletAliasModal isOpen={true} onClose={closeModal} />;
+    case ModalType.SET_PREFERRED_WALLET:
+      return (
+        <ConfirmPreferredAccountModal isOpen={true} onClose={closeModal} />
+      );
+
+    default:
+      return null;
+  }
+};
+
+export default ModalManager;
+import Button from "../../button/Button";
+import AddtoCart from "../../../assets/AddtoCart.svg";
+import Modal, { ModalProps } from "../Modal";
+import ModalBody from "../ModalBody";
+import ModalFooter from "../ModalFooter";
+import { useWalletContext } from "../../../state-management/contexts/walletContext";
+import { useNavigate } from "react-router-dom";
+import { useCartContext } from "../../../state-management/contexts/cartContext";
+import { useModal } from "../../../state-management/contexts/modalContext";
+
+const AddtoCartModal = ({ isOpen }: ModalProps) => {
+  const { closeModal } = useModal();
+  const { items, cartTotal } = useCartContext();
+  const navigate = useNavigate();
+
+  const handleProceed = () => {
+    closeModal();
+    navigate("/eservice/Cart");
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={closeModal}>
+      <ModalBody
+        align="center"
+        imageUrl={AddtoCart}
+        bodyTitle="Successfully added to cart!"
+      >
+        {/* <p>
+          Cart subtotal ({cartItems} items): <b>${cartTotal}</b>
+        </p>{" "} */}
+        <p>
+          Cart subtotal ({items?.length} items): <b>${cartTotal}</b>
+        </p>{" "}
+      </ModalBody>
+      <ModalFooter align="center">
+        <Button variant="cancel-success" onClick={closeModal}>
+          Close
+        </Button>
+        <Button variant="success" onClick={handleProceed}>
+          Proceed to cart
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default AddtoCartModal;
