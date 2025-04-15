@@ -1,0 +1,104 @@
+Nice — smart UX move to **disable CRUD actions during loading** (e.g., deleting or refetching), which prevents multiple rapid clicks or collisions.
+
+Let’s walk through how to **conditionally disable the Edit and Delete icons** on non-default tiles.
+
+---
+
+### ✅ Step 1: Update `Tile` Component to Accept `disabled` Prop
+
+Add a new prop to disable the CRUD icons:
+
+```tsx
+interface Props {
+  children: React.ReactNode;
+  onUpdateClick?: () => void;
+  onDeleteClick?: () => void;
+  disableActions?: boolean;
+  disabled?: boolean; // ✅ NEW
+  label?: string;
+}
+```
+
+Update the icons to respect `disabled`:
+
+```tsx
+{!disableActions && (
+  <div className={styles.crudContainer} data-testid="crud-container">
+    <div
+      className={`${styles.circle} ${disabled ? styles.disabled : ""}`}
+      onClick={!disabled ? onUpdateClick : undefined}
+      aria-disabled={disabled}
+      data-testid="update-button"
+    >
+      <BsPencil className={styles.editIcon} />
+    </div>
+    <div
+      className={`${styles.circle} ${disabled ? styles.disabled : ""}`}
+      onClick={!disabled ? onDeleteClick : undefined}
+      aria-disabled={disabled}
+      data-testid="delete-button"
+    >
+      <BsTrash3 className={styles.deleteIcon} />
+    </div>
+  </div>
+)}
+```
+
+---
+
+### ✅ Step 2: Add Disabled State in Delivery & Recipients
+
+#### In `Delivery.tsx`:
+
+```tsx
+<Tile
+  key={index}
+  disableActions={isFirst}
+  disabled={isRefetching || isRemoving || isDeliveryAddressLoading}
+  onUpdateClick={!isFirst ? () => handleOpenUpdateModal(addr) : undefined}
+  onDeleteClick={!isFirst ? () => handleOpenDeleteModal(addr) : undefined}
+  label={isFirst ? "DEFAULT ADDRESS" : undefined}
+>
+```
+
+#### In `Recipients.tsx`:
+
+If you're using a `useDeleteRecipient` or similar mutation:
+
+```tsx
+<Tile
+  key={index}
+  disableActions={isFirst}
+  disabled={isRefetching || isRecipientsLoading || isFetchingNextPage}
+  onUpdateClick={!isFirst ? () => handleOpenUpdateModal(r) : undefined}
+  onDeleteClick={!isFirst ? () => handleOpenDeleteModal(r) : undefined}
+  label={isFirst ? "DEFAULT RECIPIENT" : undefined}
+>
+```
+
+---
+
+### ✅ Step 3: Style the Disabled Icons (in `Tile.module.css`)
+
+```css
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+```
+
+---
+
+### Result:
+
+- CRUD icons fade and become unclickable during loading
+- Still accessible (we keep `aria-disabled`)
+- QA can target via `data-testid`
+
+---
+
+Let me know if you want to:
+- Show a loader/spinner over the Tile instead during mutation
+- Apply this pattern to top-up/subscription components
+- Add a Tooltip on hover when disabled (e.g., “Action unavailable while loading”)
