@@ -1,0 +1,127 @@
+Here’s how to refactor your `PaymentHistoryModal` to use **React Hook Form** cleanly, while keeping the same behavior — especially the conditional wallet dropdown based on the selected payment type.
+
+---
+
+### ✅ Refactored Version with `react-hook-form`
+
+```tsx
+import React from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import Button from "../../../../../button/Button";
+import Modal from "../../../../../modals/Modal";
+import Dropdown from "../../../../../formfields/Dropdown"; // assuming reusable Dropdown
+import { getLast12Months } from "../../../../../../utils/dateUtils";
+import { useWallets } from "../../../../../../hooks/useWallets";
+
+type PaymentFormValues = {
+  paymentType: "creditCard" | "ebank";
+  walletId?: string;
+  duration: string;
+};
+
+interface Props {
+  onClose: () => void;
+  onGenerate: (params: PaymentFormValues) => void;
+}
+
+const PaymentHistoryModal: React.FC<Props> = ({ onClose, onGenerate }) => {
+  const months = getLast12Months();
+  const { data: wallets = [] } = useWallets();
+
+  const {
+    handleSubmit,
+    control,
+    formState: { isValid },
+  } = useForm<PaymentFormValues>({
+    defaultValues: {
+      paymentType: "creditCard",
+      duration: "",
+      walletId: "",
+    },
+    mode: "onChange",
+  });
+
+  const paymentType = useWatch({ control, name: "paymentType" });
+
+  const onSubmit = (data: PaymentFormValues) => {
+    onGenerate(data);
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Controller
+          control={control}
+          name="paymentType"
+          rules={{ required: true }}
+          render={({ field }) => (
+            <Dropdown
+              label="Payment Type"
+              options={[
+                { label: "Credit Card", value: "creditCard" },
+                { label: "E-Bank", value: "ebank" },
+              ]}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
+
+        {paymentType === "ebank" && (
+          <Controller
+            control={control}
+            name="walletId"
+            rules={{ required: true }}
+            render={({ field }) => (
+              <Dropdown
+                label="Select Wallet"
+                options={wallets
+                  .filter((w) => w.status === "Active")
+                  .map((w) => ({
+                    label: w.alias,
+                    value: w.walletId,
+                  }))}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        )}
+
+        <Controller
+          control={control}
+          name="duration"
+          rules={{ required: true }}
+          render={({ field }) => (
+            <Dropdown
+              label="Duration"
+              options={months.map((month) => ({ label: month, value: month }))}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
+
+        <Button type="submit" disabled={!isValid}>
+          Generate
+        </Button>
+      </form>
+    </Modal>
+  );
+};
+
+export default PaymentHistoryModal;
+```
+
+---
+
+### ✅ Benefits of this setup:
+- **Clean integration** with `react-hook-form`
+- **Validation** via rules (e.g., `required`)
+- **Live watching** for payment type using `useWatch`
+- **Modular Dropdowns** with a consistent interface
+
+---
+
+Let me know if you'd like to add form-level validation messages, reset logic after submission, or auto-close the modal only if the fetch is successful!
