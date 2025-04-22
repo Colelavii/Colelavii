@@ -1,0 +1,98 @@
+Thanks for the clarification — since your `payment-history` endpoint is a **POST** request, `useInfiniteQuery` isn't the right tool (it only supports `GET` under the hood).
+
+To support **pagination with POST**, you'll need to use a combination of:
+1. `useInfiniteQuery` **with a custom fetch function using POST**
+2. A modified `APIClient.post()` that sends pagination info in the body
+
+---
+
+## ✅ Step-by-Step Fix for `usePaymentHistory` (POST + Pagination)
+
+### 🔹 1. Update `fetchPayments` to use `POST` properly
+
+```ts
+// hooks/usePaymentHistory.ts
+import { useInfiniteQuery } from "@tanstack/react-query";
+import APIClient from "../services/apiClient";
+
+interface PaymentHistoryQuery {
+  subscriberId: string;
+  walletId?: string;
+  paymentType: "creditCard" | "ebank";
+  duration: string;
+  pageSize: number;
+}
+
+const fetchPayments = async ({
+  pageParam = 1,
+  ...body
+}: PaymentHistoryQuery & { pageParam?: number }) => {
+  const response = await APIClient.post("/payment-history", {
+    ...body,
+    page: pageParam,
+  });
+  return response.data;
+};
+
+export const usePaymentHistory = (query: PaymentHistoryQuery) => {
+  return useInfiniteQuery({
+    queryKey: ["paymentHistory", query],
+    queryFn: ({ pageParam }) => fetchPayments({ ...query, pageParam }),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage?.hasMore ? allPages.length + 1 : undefined,
+    enabled: !!query.subscriberId && !!query.duration && !!query.paymentType,
+  });
+};
+```
+
+> ✅ This assumes your backend accepts pagination (`page`, `pageSize`) in the **body** of the POST.
+
+---
+
+## 🧩 Optional: Update `APIClient.post`
+
+If you're using a custom `APIClient`, make sure the `.post()` method looks like:
+
+```ts
+post<T = any>(url: string, data: any): Promise<{ data: T }> {
+  return axios.post(url, data);
+}
+```
+
+---
+
+## 🔄 Usage in Component
+
+```tsx
+const {
+  data,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  refetch,
+} = usePaymentHistory({
+  subscriberId,
+  walletId,
+  paymentType,
+  duration,
+  pageSize: 10,
+});
+```
+
+---
+
+### 📝 Load More Button
+
+```tsx
+{hasNextPage && (
+  <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+    {isFetchingNextPage ? "Loading..." : "Load More"}
+  </Button>
+)}
+```
+
+---
+
+If your backend doesn’t support pagination in the request body, we’ll need a workaround (like encoding query params or using a different pattern).
+
+Would you like a version of this where the modal submission **triggers** the `usePaymentHistory` call and the listing appears below?
