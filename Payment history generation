@@ -1,3 +1,12 @@
+Request URL:
+https://int-dev.cojamaica.com/am/api/v1/GetPaymentHistory
+Request Method:
+POST
+Status Code:
+405 Method Not Allowed
+
+https://int-dev.cojamaica.com/am/api/v1/GetPaymentHistory?paymentType=ebank&subscriberId=53694&duration=March%202024&page=1&pageSize=10
+
 Here’s how to refactor your `PaymentHistoryModal` to use **React Hook Form** cleanly, while keeping the same behavior — especially the conditional wallet dropdown based on the selected payment type.
 
 ---
