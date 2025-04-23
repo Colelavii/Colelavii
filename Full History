@@ -1,0 +1,495 @@
+import {
+  useInfiniteQuery,
+  useMutation,
+  UseMutationResult,
+} from "@tanstack/react-query";
+import axios, { AxiosError } from "axios";
+import { variables } from "../Variables";
+import { ErrorResponse } from "./useEwallets";
+
+// Define the arguments to the changePassword function
+export interface GetPaymentHistoryPayload {
+  subscriberId: number | undefined;
+  paymentType: "creditCard" | "ebank";
+  walletId?: number | undefined;
+  duration: string;
+  pageSize: number;
+}
+
+const fetchPayments = async ({
+  pageParam = 1,
+  ...body
+}: GetPaymentHistoryPayload & { pageParam?: number }) => {
+  const response = await axios.post(`${variables.PAYMENT_HISTORY}`, {
+    body,
+    page: pageParam,
+  });
+  return response.data;
+};
+
+export const useGetPaymentHistory = (query: GetPaymentHistoryPayload) => {
+  return useInfiniteQuery({
+    queryKey: ["paymentHistory", query],
+    queryFn: ({ pageParam }) => fetchPayments({ ...query, pageParam }),
+    getNextPageParam: (lastPage, allPages) => {
+      lastPage.hasMore ? allPages.length + 1 : undefined;
+    },
+  });
+};
+
+// Here the mutation returns a boolean (true for success)
+// and we specify the error type as AxiosError<ErrorResponse>
+// export function useGetPaymentHistory(): UseMutationResult<
+//   boolean,
+//   AxiosError<ErrorResponse>,
+//   GetPaymentHistoryPayload
+// > {
+//   return useMutation<
+//     boolean,
+//     AxiosError<ErrorResponse>,
+//     GetPaymentHistoryPayload
+//   >(async (payload: GetPaymentHistoryPayload) => {
+//     const response = await axios.post(`${variables.PAYMENT_HISTORY}`, payload);
+
+//     return response.data;
+//   });
+// }
+
+import { forwardRef } from "react";
+import FormStyles from "../FormFields.module.css";
+
+interface Option {
+  label: string;
+  value: string | number;
+}
+interface Props {
+  id?: string;
+  options?: (Option | string)[];
+  value: string | number | undefined; //selectedOption: string | number | undefined;
+  //selectedOption?: string | number;
+  onChange: (value: string | number) => void;
+}
+
+const Dropdown = forwardRef<HTMLSelectElement, Props>(
+  (
+    {
+      id,
+      options,
+      value, //selectedOption,
+      onChange,
+      ...props
+    },
+    ref
+  ) => {
+    return (
+      <select
+        data-testid={id}
+        value={value}
+        className={`${FormStyles["form-control"]} 
+        }`}
+        onChange={(e) => onChange(e.target.value)}
+        ref={ref}
+        {...props}
+      >
+        <option value="" disabled>
+          Select an option
+        </option>
+        {options?.map((option, index) => {
+          const optionObject =
+            typeof option === "string"
+              ? { label: option, value: option }
+              : option;
+          return (
+            <option key={index} value={optionObject.value}>
+              {optionObject.label}
+            </option>
+          );
+        })}
+      </select>
+    );
+  }
+);
+
+export default Dropdown;
+import { useContext } from "react";
+import Modal, { ModalProps } from "../../../../../../modals/Modal";
+import ModalBody from "../../../../../../modals/ModalBody";
+import Button from "../../../../../../button/Button";
+import ModalFooter from "../../../../../../modals/ModalFooter";
+import ModalHeader from "../../../../../../modals/ModalHeader";
+import styles from "../PaymentHistory.module.css";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import AuthContext from "../../../../../../../state-management/contexts/authContext";
+import { useModal } from "../../../../../../../state-management/contexts/modalContext";
+import ErrorMessage from "../../../../../../errormessage/ErrorMessage";
+import FormLabel from "../../../../../../label/FormLabel";
+import { GetPaymentHistoryPayload, useGetPaymentHistory } from "../../../../../../../hooks/useGetPaymentHistory";
+import { getLast12Months } from "../../../../../../../utils/dateUtils";
+import FormStyles from "../../../../../../FormFields.module.css";
+import Dropdown from "../../../../../../dropdown/Dropdown";
+import { useDisplayAllAccounts } from "../../../../../../../hooks/useEwallets";
+
+interface Props extends ModalProps {
+  onGenerate: (params: GetPaymentHistoryPayload) => void;
+}
+const GeneratePaymentHistoryModal = ({
+  isOpen,
+  onClose,
+  onGenerate,
+}: Props) => {
+  const { modalData: userQuery, openModal, closeModal } = useModal();
+  const months = getLast12Months();
+  const { authState } = useContext(AuthContext);
+  const subscriberId = authState?.subscriberId;
+  //   const { data: walletData } = useDisplayAllAccounts(subscriberId, 2);
+
+  //   const wallets = walletData?.pages[0].wallets.filter(
+  //     (w) => w.accountStatus === "Active"
+  //   );
+  const {
+    handleSubmit,
+    register,
+    setValue,
+    control,
+    formState: { isValid, errors },
+  } = useForm<GetPaymentHistoryPayload>({
+    defaultValues: {
+      paymentType: "creditCard",
+      duration: "",
+      walletId: 0,
+    },
+    mode: "onChange",
+  });
+    const {
+      data,
+      fetchNextPage,
+      hasNextPage,
+      isFetchingNextPage,
+      refetch,
+    } = useGetPaymentHistory({pageSize:1});
+
+  const paymentType = useWatch({
+    control,
+    name: "paymentType",
+  });
+  const onSubmit = (data: GetPaymentHistoryPayload) => {
+    //onGenerate(data);
+    console.log("Data submitted:", data);
+    const payload = {
+      subscriberId: authState.subscriberId,
+      paymentType: data.paymentType,
+    //  walletId: data.walletId,
+      duration: data.duration,
+      page: 1,
+      pageSize: 10,
+    };
+  };
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen}>
+      <ModalHeader children="Generate Payment History" onClose={onClose} />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <ModalBody>
+          <div className={styles.filterContainer}>
+            <p>
+              Payment history will be generated for the selected payment type
+              and period.
+            </p>
+
+            <div className={FormStyles["input-column"]}>
+              {" "}
+              <FormLabel htmlFor="paymentType" label="Payment Type" />
+              {/* <Dropdown
+              value={paymentType}
+              onChange={() => setValue("paymentType", paymentType)}
+            /> */}
+              <Controller
+                control={control}
+                name="paymentType"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <Dropdown
+                    //   label="Payment Type"
+                    options={[
+                      { label: "Credit Card", value: "creditCard" },
+                      { label: "E-Bank", value: "ebank" },
+                    ]}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              {paymentType === "ebank" && (
+                <Controller
+                  control={control}
+                  name="walletId"
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <Dropdown
+                      //   options={wallets?.map((w) => ({
+                      //     label: w.alias,
+                      //     value: w.accountIdentifier || w.alias,
+                      //   }))}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              )}
+              {/* <select
+              {...register("paymentType", {
+                required: "The payment type field is required.",
+              })}
+              className={styles.filterDropdown}
+              autoComplete="paymentType"
+              value={paymentType}
+            >
+              <option value="">Select Payment Type</option>
+              <option value="cc">Credit Card</option>
+              <option value="ebank">Ebank</option>
+            </select> */}
+              <ErrorMessage errorMessage={errors.paymentType?.message} />
+            </div>
+
+            <div className={FormStyles["input-column"]}>
+              {" "}
+              <FormLabel htmlFor="duration" label="Duration" />
+              {/* <Dropdown
+              value={months}
+              onChange={() => setValue("paymentType", paymentType)}
+            /> */}
+              <Controller
+                control={control}
+                name="duration"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <Dropdown
+                    options={months.map((month) => ({
+                      label: month,
+                      value: month,
+                    }))}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              {/* <select
+              {...register("duration", {
+                required: "The duration field is required.",
+              })}
+              className={styles.filterDropdown}
+              autoComplete="duration"
+              value=""
+            >
+              <option value="">Select Duration</option>
+              {months.map((month, index) => (
+                <option key={index} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select> */}
+              <ErrorMessage errorMessage={errors.duration?.message} />
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter align="right">
+          <Button variant="cancel-secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="secondary" type="submit">
+            Generate
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
+  );
+};
+
+export default GeneratePaymentHistoryModal;
+
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import styles from "./PaymentHistory.module.css";
+import DownloadIcon from "../../../../../../assets/Download.svg";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import Pagination from "../../../../../pagination/Pagination";
+import { useContext, useState } from "react";
+import Button from "../../../../../button/Button";
+import { useGetPaymentHistory } from "../../../../../../hooks/useGetPaymentHistory";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import {
+  ModalType,
+  useModal,
+} from "../../../../../../state-management/contexts/modalContext";
+
+interface Row {
+  orderNumber: number;
+  Date: string;
+  PaymentMethod: string;
+  Amount: string;
+}
+const PaymentHistory = () => {
+  // const {
+  //   mutate: getPaymentHistory,
+  //   isLoading,
+  //   error,
+  // } = useGetPaymentHistory();
+  const authContext = useContext(AuthContext);
+  const { authState } = authContext;
+  const { openModal, closeModal } = useModal();
+
+  const [totalItems] = useState(6);
+  const data: Row[] = [
+    {
+      orderNumber: 257702133,
+      Date: "05 Sep 2021",
+      PaymentMethod: "Primary Wallet",
+      Amount: "$250.00",
+    },
+    {
+      orderNumber: 214378922,
+      Date: "24 Aug 2021",
+      PaymentMethod: "Visa ending in 5980",
+      Amount: "$5,000.00",
+    },
+    {
+      orderNumber: 241189765,
+      Date: "15 Aug 2021",
+      PaymentMethod: "Loans Department",
+      Amount: "$5,000.00",
+    },
+  ];
+
+  // Function to handle PDF download
+  const handleDownload = (row: Row) => {
+    const doc = new jsPDF();
+
+    doc.text(`Transaction Details`, 14, 10);
+
+    const columns = ["Transaction ID", "Date", "Payment Method", "Amount"];
+    const rows = data.map((row) => [
+      row.orderNumber,
+      row.Date,
+      row.PaymentMethod,
+      row.Amount,
+    ]); // Table rows
+
+    doc.autoTable({
+      head: [columns], // Header row
+      body: rows,
+      startY: 20, // Start position below the title
+      styles: {
+        halign: "left", // Horizontal alignment
+        valign: "middle", // Vertical alignment
+        fontSize: 10, // Font size for table text
+      },
+      headStyles: {
+        fillColor: "#007BFF", // Blue background for header
+        textColor: "var(--white)", // White text for header
+      },
+    });
+
+    doc.save(`${row.Date}_details.pdf`);
+  };
+
+  const handleSubmit = () => {
+    // Handle form submission logic here
+    console.log("Form submitted");
+  };
+
+  const handleOpenModal = () => {
+    // if (!disableButton) {
+    openModal(ModalType.GENERATE_PAYMENT_HISTORY);
+    // }
+  };
+
+  return (
+    <StandardLayout
+      header="Payment History"
+      button={
+        <Button
+          variant="primary"
+          onClick={handleOpenModal}
+          // disabled={
+          //   // !!error || isLoading
+          //   // disableButton || configLoading
+          // }
+        >
+          Generate Payment History
+        </Button>
+      }
+    >
+      {/* <form className={styles.filterContainer}>
+        <select className={styles.filterDropdown}>
+          <option value="">Select Payment Type</option>
+          <option value="cc">Credit Card</option>
+          <option value="ebank">Ebank</option>
+        </select>
+        <select className={styles.filterDropdown}>
+          <option value="">Select Month</option>
+          <option value="Jan">January</option>
+          <option value="Feb">February</option>
+          <option value="Mar">March</option>
+          <option value="Apr">April</option>
+          <option value="May">May</option>
+          <option value="Jun">June</option>
+          <option value="Jul">July</option>
+          <option value="Aug">August</option>
+          <option value="Sep">September</option>
+          <option value="Oct">October</option>
+          <option value="Nov">November</option>
+          <option value="Dec">December</option>
+        </select>
+        <select className={styles.filterDropdown}>
+          <option value="">Select Year</option>
+          <option value="2024">2024</option>
+        </select>
+        <Button variant="secondary">Search</Button>
+      </form> */}
+      <div className={styles.tableContainer}>
+        <div className={styles.infoText}>
+          Please note that the payment history is only available for Credit Card
+          and Ewallet transactions done in the last twelve months. Please select
+          the necessary fields from the dropdown lists provided and select the
+          Search button.
+        </div>
+
+        {/* {hasNextPage && (
+  <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+    {isFetchingNextPage ? "Loading..." : "Load More"}
+  </Button>
+)} */}
+        {/* <div className={styles.header}>
+          <div>Order Number</div>
+          <div>Date</div>
+          <div>Payment Method</div>
+          <div>Amount</div>
+          <div>Receipt</div>
+        </div> */}
+        {/* {data.map((row) => (
+          <div className={styles.row} key={row.orderNumber}>
+            <div>{row.orderNumber}</div>
+            <div>{row.Date}</div>
+            <div>{row.PaymentMethod}</div>
+            <div>{row.Amount}</div>
+            <div>
+              <button
+                className={styles.downloadButton}
+                onClick={() => handleDownload(row)}
+              >
+                <img
+                  src={DownloadIcon}
+                  alt="Download Icon"
+                  className={styles.icon}
+                />
+              </button>
+            </div>
+          </div>
+        ))} */}
+      </div>
+    </StandardLayout>
+  );
+};
+
+export default PaymentHistory;
