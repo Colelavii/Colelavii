@@ -1,4 +1,349 @@
-	
+(2) [{…}, {…}]
+0
+: 
+{orderNumber: 'S1-C4-C6-U7-A5-Q7', date: 'March 04, 2024', paymentMethod: 'Website Account: H0-Y7-L4-J2-E4-Q9', amount: '2,500.00', documentId: 11394}
+1
+: 
+{orderNumber: 'S0-N5-L0-F6-A2-X3', date: 'March 01, 2024', paymentMethod: 'Website Account: H0-Y7-L4-J2-E4-Q9', amount: '200.00', documentId: 11376}
+length
+: 
+2
+[[Prototype]]
+: 
+Array(0)
+
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import styles from "./PaymentHistory.module.css";
+import DownloadIcon from "../../../../../../assets/Download.svg";
+import StandardLayout from "../../../../../standardlayout/StandardLayout";
+import Pagination from "../../../../../pagination/Pagination";
+import { useContext, useState } from "react";
+import Button from "../../../../../button/Button";
+import {
+  GetPaymentHistoryPayload,
+  useGetPaymentHistory,
+} from "../../../../../../hooks/useGetPaymentHistory";
+import AuthContext from "../../../../../../state-management/contexts/authContext";
+import {
+  ModalType,
+  useModal,
+} from "../../../../../../state-management/contexts/modalContext";
+
+interface Row {
+  orderNumber: number;
+  Date: string;
+  PaymentMethod: string;
+  Amount: string;
+}
+const PaymentHistory = () => {
+  const { authState } = useContext(AuthContext);
+  const { openModal } = useModal();
+
+  const [queryParams, setQueryParams] =
+    useState<GetPaymentHistoryPayload | null>(null);
+
+  const {
+    data: paymentHistory,
+    // fetchNextPage,
+    // hasNextPage,
+    // isFetchingNextPage,
+    isLoading,
+  } = useGetPaymentHistory(queryParams!, !!queryParams);
+
+  const handleOpenModal = () => {
+    openModal(ModalType.GENERATE_PAYMENT_HISTORY, {
+      onComplete: (
+        formData: Omit<GetPaymentHistoryPayload, "subscriberId">
+      ) => {
+        setQueryParams({
+          ...formData,
+          subscriberId: 53694, // authState.subscriberId,
+          pageSize: 10,
+        });
+      },
+    });
+  };
+  // Function to handle PDF download
+  // const handleDownload = (row: Row) => {
+  //   const doc = new jsPDF();
+
+  //   doc.text(`Transaction Details`, 14, 10);
+
+  //   const columns = ["Transaction ID", "Date", "Payment Method", "Amount"];
+  //   const rows = data.map((row) => [
+  //     row.orderNumber,
+  //     row.Date,
+  //     row.PaymentMethod,
+  //     row.Amount,
+  //   ]); // Table rows
+
+  //   doc.autoTable({
+  //     head: [columns], // Header row
+  //     body: rows,
+  //     startY: 20, // Start position below the title
+  //     styles: {
+  //       halign: "left", // Horizontal alignment
+  //       valign: "middle", // Vertical alignment
+  //       fontSize: 10, // Font size for table text
+  //     },
+  //     headStyles: {
+  //       fillColor: "#007BFF", // Blue background for header
+  //       textColor: "var(--white)", // White text for header
+  //     },
+  //   });
+
+  //   doc.save(`${row.Date}_details.pdf`);
+  // };
+
+  return (
+    <StandardLayout
+      header="Payment History"
+      button={
+        <Button
+          variant="primary"
+          onClick={handleOpenModal}
+          // disabled={
+          //   // !!error || isLoading
+          //   // disableButton || configLoading
+          // }
+        >
+          Generate Payment History
+        </Button>
+      }
+    >
+      {!queryParams && !isLoading && (
+        <div className={styles.tableContainer}>
+          <div className={styles.infoText}>
+            Please note that the payment history is only available for Credit
+            Card and Ewallet transactions done in the last twelve months. Please
+            select the necessary fields from the dropdown lists provided and
+            select the Search button.
+          </div>
+        </div>
+      )}
+
+      {isLoading && <div>Loading...</div>}
+
+      {queryParams && paymentHistory?.records?.length === 0 && (
+        <div className={styles.tableContainer}>
+          <div className={styles.infoText}>
+            No payment history available for the selected filters.
+          </div>
+        </div>
+      )}
+
+      <div className={styles.header}>
+        <div>Order Number</div>
+        <div>Date</div>
+        <div>Payment Method</div>
+        <div>Amount</div>
+        <div>Receipt</div>
+      </div>
+
+      {paymentHistory?.records?.map((record, pageIndex) => (
+        <>
+          <div className={styles.header}>
+            <div>Order Number</div>
+            <div>Date</div>
+            <div>Payment Method</div>
+            <div>Amount</div>
+            <div>Receipt</div>
+          </div>
+          <div
+            key={`${record.orderNumber}-${record.documentId}`}
+            className={styles.row}
+          >
+            <div>{record.orderNumber}</div>
+            <div>{record.date}</div>
+            <div>{record.paymentMethod}</div>
+            <div>{record.amount}</div>
+            <button
+              className={styles.downloadButton}
+              // onClick={() => handleDownload(row)}
+            >
+              <img
+                src={DownloadIcon}
+                alt="Download Icon"
+                className={styles.icon}
+              />
+            </button>
+          </div>
+        </>
+      ))}
+      {/* Pagination */}
+      {/* {hasNextPage && (
+        <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+          {isFetchingNextPage ? "Loading..." : "Load More"}
+        </Button>
+      )} */}
+    </StandardLayout>
+  );
+};
+
+export default PaymentHistory;
+.tableContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Space between rows */
+}
+
+.header,
+.row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 2fr 1fr; /* Adjust column sizes as needed */
+  align-items: center; /* Center items vertically */
+  text-align: left;
+  gap: 10px; /* Space between columns */
+  padding: 10px;
+}
+
+.header {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: bold;
+}
+
+.row {
+  background-color: var(--white);
+  color: #5c5c5c;
+  border: 1px solid #e9e5e5;
+  border-radius: 8px;
+}
+
+.row:hover {
+  background-color: #f9f9f9; /* Highlight row on hover */
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle; /* Aligns the icon with text if present */
+}
+
+.downloadButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease-in-out;
+}
+
+.downloadButton:hover {
+  transform: scale(1.1); /* Slightly enlarges the icon on hover */
+}
+.filterContainer {
+  width: 80%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-gap: 20px;
+  margin-left: 25px;
+  padding: 0.5rem;
+}
+.filterDropdown {
+  display: inline-block;
+  margin-right: 10px; /* Space between dropdowns */
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.filterDropdown:hover {
+  background-color: #f0f0f0; /* Change background on hover */
+}
+
+.infoText {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  background-color: lightblue;
+  border-radius: 4px;
+  padding: 35px;
+}
+
+@media (max-width: 600px) {
+  .header,
+  .row {
+    grid-template-columns: 1fr; /* Stack all items */
+    text-align: left; /* Align text to the left */
+  }
+
+  .header div,
+  .row div {
+    margin-bottom: 5px; /* Add spacing between items */
+  }
+}
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { variables } from "../Variables";
+
+export interface GetPaymentHistoryPayload {
+  subscriberId: number | undefined;
+  paymentType: "cc" | "ebank";
+  walletId?: number | undefined;
+  duration: string;
+  pageSize: number;
+}
+export interface PaymentHistoryRecord {
+  orderNumber: string;
+  date: string;
+  paymentMethod: string;
+  amount: string;
+  documentId: number;
+}
+export interface PaymentHistoryResponse {
+  records: PaymentHistoryRecord[];
+  hasMore: boolean;
+}
+
+const fetchPayments = async (
+  payload: GetPaymentHistoryPayload & { pageParam?: number }
+): Promise<PaymentHistoryResponse> => {
+  const { pageParam = 1, ...params } = payload;
+  const queryParams = {
+    ...params,
+    page: pageParam,
+  };
+
+  // Remove walletId from queryParams if it's undefined
+  if (!params.walletId) {
+    delete queryParams.walletId;
+  }
+  const response = await axios.get(`${variables.PAYMENT_HISTORY}`, {
+    params: queryParams,
+  });
+  console.log("Payment History Response", response.data);
+  return response.data;
+};
+
+export const useGetPaymentHistory = (
+  query: GetPaymentHistoryPayload | null,
+  enabled: boolean
+) => {
+  return useQuery({
+    queryKey: ["paymentHistory", query],
+    queryFn: ({ pageParam }) => {
+      if (!query)
+        throw new Error("Query is null, query must be defined before fetching");
+      return fetchPayments({
+        ...(query as GetPaymentHistoryPayload),
+        pageParam,
+      });
+    },
+    // getNextPageParam: (lastPage, allPages) =>
+    //   lastPage.hasMore ? allPages.length + 1 : undefined,
+    enabled: enabled && query !== null,
+  });
+};
+
+
+
 Response body
 Download
 [
