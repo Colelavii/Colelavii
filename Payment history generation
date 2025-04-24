@@ -1,3 +1,23 @@
+	
+Response body
+Download
+[
+  {
+    "orderNumber": "S1-C4-C6-U7-A5-Q7",
+    "date": "March 04, 2024",
+    "paymentMethod": "Website Account: H0-Y7-L4-J2-E4-Q9",
+    "amount": "2,500.00",
+    "documentId": 11394
+  },
+  {
+    "orderNumber": "S0-N5-L0-F6-A2-X3",
+    "date": "March 01, 2024",
+    "paymentMethod": "Website Account: H0-Y7-L4-J2-E4-Q9",
+    "amount": "200.00",
+    "documentId": 11376
+  }
+]
+
 Request URL:
 https://int-dev.cojamaica.com/am/api/v1/GetPaymentHistory
 Request Method:
